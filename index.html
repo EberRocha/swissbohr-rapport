@@ -7,7 +7,7 @@
 </head>
 <body>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Dancing+Script:wght@600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -79,6 +79,7 @@
     padding: 9px 10px; width:100%;
   }
   input[type="number"], .mono{ font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  #unterschriftTag{ font-family: 'Dancing Script', cursive; font-size:27px; font-weight:600; padding:8px 10px 4px 10px; }
   input:focus, select:focus, textarea:focus, button:focus-visible{
     outline: 2px solid var(--focus); outline-offset: 1px;
   }
@@ -162,6 +163,12 @@
     font-weight:700; font-size:15px;
   }
   .total-line .val{ font-family: var(--font-mono); font-size:17px; }
+  .total-per-person{
+    display:flex; flex-wrap:wrap; gap:5px 14px; padding:0 14px 11px 14px;
+    background: var(--surface-2); font-size:12.5px; color: var(--muted);
+  }
+  .total-per-person b{ color: var(--ink); font-family: var(--font-mono); font-weight:600; }
+  .total-per-person:empty{ display:none; padding:0; }
 
   .anker-row{ border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:12px; background: var(--bg); position:relative; }
   .anker-row-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; }
@@ -174,6 +181,23 @@
   .diverse-check input[type="checkbox"]{ width:19px; height:19px; flex:none; accent-color: var(--red); }
   .hint-inline{ font-weight:400; color: var(--muted); font-size:12px; }
   .diverse-body{ margin-top:10px; padding-left:27px; }
+
+  /* Custom dropdown that replaces native <input list=""> — iOS Safari
+     renders a native datalist as a cramped autocomplete strip above the
+     keyboard instead of a real dropdown, so we build our own list here
+     (still lets the person type anything freely, not just pick a value). */
+  .combo-panel{
+    position:fixed; z-index:60; max-height:230px; overflow-y:auto;
+    background: var(--surface); border:1px solid var(--line); border-radius:8px;
+    box-shadow: 0 8px 24px oklch(20% 0 0 / .22); padding:4px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .combo-option{
+    display:block; width:100%; text-align:left; padding:10px 11px; border:none;
+    background:none; font:inherit; font-size:15px; color: var(--ink); border-radius:6px; cursor:pointer;
+  }
+  .combo-option:hover, .combo-option:active{ background: var(--red-wash); color: var(--red-ink); }
+  .combo-empty{ padding:10px 11px; color: var(--muted); font-size:13px; }
 
   .bottom-bar{
     position:fixed; left:0; right:0; bottom:0; z-index:20; background: var(--surface);
@@ -306,7 +330,7 @@
       </div>
       <div class="field">
         <label for="tagWetter">Wetter</label>
-        <input id="tagWetter" type="text" list="wetterOptions" placeholder="z. B. sonnig">
+        <input id="tagWetter" type="text" data-list="wetterOptions" placeholder="z. B. sonnig">
         <datalist id="wetterOptions">
           <option value="Sonnig"></option><option value="Teilweise bewölkt"></option><option value="Bewölkt"></option>
           <option value="Bedeckt"></option><option value="Regen"></option><option value="Starkregen"></option>
@@ -321,6 +345,7 @@
       <summary>Aufgeführte Arbeiten <svg class="ic chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></summary>
       <div class="card-body" id="catsContainer"></div>
       <div class="total-line"><span>Total Stunden</span><span class="val" id="totalStunden">0</span></div>
+      <div class="total-per-person" id="totalPerPerson"></div>
     </details>
 
     <details class="card">
@@ -334,19 +359,19 @@
 
         <div class="section-label" style="margin-top:16px">Weiteres Material</div>
         <div class="row">
-          <div class="field"><label for="moertelTyp">Mörtel Typ</label><input id="moertelTyp" type="text" list="moertelTypOptions"></div>
+          <div class="field"><label for="moertelTyp">Mörtel Typ</label><input id="moertelTyp" type="text" data-list="moertelTypOptions"></div>
           <div class="field"><label for="moertelKg">kg</label><input id="moertelKg" type="number" inputmode="decimal"></div>
         </div>
         <div class="row">
-          <div class="field"><label for="netzeTyp">Netze Typ</label><input id="netzeTyp" type="text" list="netzeTypOptions"></div>
+          <div class="field"><label for="netzeTyp">Netze Typ</label><input id="netzeTyp" type="text" data-list="netzeTypOptions"></div>
           <div class="field"><label for="netzeM2b">m²</label><input id="netzeM2b" type="number" inputmode="decimal"></div>
         </div>
         <div class="row">
-          <div class="field"><label for="gunitTyp">Gunit Typ</label><input id="gunitTyp" type="text" list="gunitTypOptions"></div>
+          <div class="field"><label for="gunitTyp">Gunit Typ</label><input id="gunitTyp" type="text" data-list="gunitTypOptions"></div>
           <div class="field"><label for="gunitM3">m³ lose</label><input id="gunitM3" type="number" inputmode="decimal"></div>
         </div>
         <div class="row">
-          <div class="field"><label for="zusaetzeTyp">Zusätze Typ</label><input id="zusaetzeTyp" type="text" list="zusaetzeTypOptions"></div>
+          <div class="field"><label for="zusaetzeTyp">Zusätze Typ</label><input id="zusaetzeTyp" type="text" data-list="zusaetzeTypOptions"></div>
           <div class="field"><label for="zusaetzeKgL">kg, l</label><input id="zusaetzeKgL" type="text"></div>
         </div>
         <div class="field"><label for="diversesMaterial">Diverses</label><textarea id="diversesMaterial" rows="2"></textarea></div>
@@ -491,6 +516,86 @@
     try { return window.self !== window.top; } catch(e){ return true; }
   }
 
+  /* ---------- combo dropdown ----------
+     Replaces native <input list="..."> everywhere. iOS Safari shows a
+     native datalist as a cramped, truncated autocomplete strip above the
+     keyboard rather than a real dropdown — this builds one ourselves
+     (reading the same <datalist> options as its data source), while still
+     letting the person type any free text, exactly like before. */
+  var comboPanel = null, comboActiveInput = null;
+  function comboOptionValues(listId){
+    var dl = document.getElementById(listId);
+    if(!dl) return [];
+    return Array.prototype.map.call(dl.querySelectorAll('option'), function(o){ return o.value; });
+  }
+  function closeCombo(){
+    if(comboPanel){ comboPanel.remove(); comboPanel = null; }
+    comboActiveInput = null;
+  }
+  function positionCombo(inputEl){
+    if(!comboPanel) return;
+    var r = inputEl.getBoundingClientRect();
+    var vh = window.innerHeight;
+    comboPanel.style.left = Math.max(6, r.left) + 'px';
+    comboPanel.style.width = r.width + 'px';
+    var spaceBelow = vh - r.bottom;
+    if(spaceBelow < 170 && r.top > 170){
+      comboPanel.style.top = 'auto';
+      comboPanel.style.bottom = (vh - r.top + 4) + 'px';
+    } else {
+      comboPanel.style.bottom = 'auto';
+      comboPanel.style.top = (r.bottom + 4) + 'px';
+    }
+  }
+  function renderComboOptions(inputEl){
+    if(!comboPanel) return;
+    var all = comboOptionValues(inputEl.getAttribute('data-list'));
+    var q = (inputEl.value||'').trim().toLowerCase();
+    var filtered = q ? all.filter(function(v){ return v.toLowerCase().indexOf(q) !== -1; }) : all;
+    if(!filtered.length){
+      comboPanel.innerHTML = '<div class="combo-empty">Kein Treffer – wird als freier Text übernommen</div>';
+      return;
+    }
+    comboPanel.innerHTML = filtered.map(function(v){
+      return '<button type="button" class="combo-option">'+esc(v)+'</button>';
+    }).join('');
+  }
+  function openCombo(inputEl){
+    closeCombo();
+    comboActiveInput = inputEl;
+    comboPanel = document.createElement('div');
+    comboPanel.className = 'combo-panel';
+    document.body.appendChild(comboPanel);
+    positionCombo(inputEl);
+    renderComboOptions(inputEl);
+  }
+  document.addEventListener('focusin', function(e){
+    var inp = e.target.closest && e.target.closest('input[data-list]');
+    if(inp) openCombo(inp);
+  });
+  document.addEventListener('input', function(e){
+    if(comboActiveInput && e.target === comboActiveInput) renderComboOptions(comboActiveInput);
+  });
+  document.addEventListener('click', function(e){
+    if(!comboPanel) return;
+    var opt = e.target.closest('.combo-option');
+    if(opt){
+      if(comboActiveInput){
+        comboActiveInput.value = opt.textContent;
+        comboActiveInput.dispatchEvent(new Event('input', {bubbles:true}));
+      }
+      closeCombo();
+      return;
+    }
+    if(e.target !== comboActiveInput && !comboPanel.contains(e.target)) closeCombo();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape'){ closeCombo(); return; }
+    if(e.key === 'Enter' && comboActiveInput && e.target === comboActiveInput) closeCombo();
+  });
+  window.addEventListener('scroll', function(){ if(comboActiveInput) positionCombo(comboActiveInput); }, true);
+  window.addEventListener('resize', function(){ if(comboActiveInput) positionCombo(comboActiveInput); });
+
   function showPrompt(message, defaultValue, onSubmit){
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(20,20,20,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -523,7 +628,7 @@
 
   var CATS = [
     {key:'fahrt', label:'Fahrt nach', qty:[{k:'ziel', label:'Ziel', type:'text'}]},
-    {key:'anker_pfaehle', label:'Anker / Pfähle', qty:[
+    {key:'anker_pfaehle', label:'Anker / Pfähle', multiRow:true, qty:[
       {k:'typ', label:'Typ', type:'text', list:'typOptions'},
       {k:'bohren_m', label:"Bohren m'", type:'number'},
       {k:'versetzen_m', label:"Versetzen, injizieren m'", type:'number'},
@@ -538,24 +643,30 @@
     {key:'beihilfe_aushub', label:'Beihilfe für Aushub'},
     {key:'wartezeit', label:'Wartezeit', hint:'Grund bei Bemerkungen'},
     {key:'bohrwagenreparatur', label:'Bohrwagenreparatur', hint:'Grund bei Bemerkungen'},
-    {key:'aliva_257', label:'Aliva 257 Top'},
-    {key:'platten_ersetzen', label:'Platten ersetzen'},
+    {key:'aliva_257', label:'Aliva 257 Top', defaultRemark:'Platten ersetzen'},
     {key:'material_aufraeumen', label:'Material aufräumen'},
     {key:'bohrwagen_waschen', label:'Bohrwagen waschen / Parkdienst'}
   ];
 
+  function freshCatRow(c){
+    var row = {};
+    c.qty.forEach(function(f){ row[f.k] = ''; });
+    return row;
+  }
   function freshCategories(){
     var out = {};
     CATS.forEach(function(c){
-      var qty = {};
-      c.qty.forEach(function(f){ qty[f.k] = ''; });
-      out[c.key] = { qty: qty, personal: [] };
+      if(c.multiRow){
+        out[c.key] = { rows: [ freshCatRow(c) ], personal: [] };
+      } else {
+        out[c.key] = { qty: freshCatRow(c), personal: [] };
+      }
     });
     return out;
   }
   function freshDiverses(){
     var out = {};
-    DIVERSE_OPTIONS.forEach(function(o){ out[o.key] = { selected:false, personal:[], remark:'' }; });
+    DIVERSE_OPTIONS.forEach(function(o){ out[o.key] = { selected:false, personal:[], remark: o.defaultRemark || '' }; });
     return out;
   }
   function sumDiversesStunden(diversesObj){
@@ -574,7 +685,7 @@
       diverses: freshDiverses(),
       material: { ankerPfaehle:[{typ:'',l:'',stk:''}], moertelTyp:'', moertelKg:'', netzeTyp:'', netzeM2:'', gunitTyp:'', gunitM3:'', zusaetzeTyp:'', zusaetzeKgL:'', diversesMaterial:'' },
       fahrzeuge: { lkwStd:'', pwKm:'', dieselL:'' },
-      bemerkungen: '', unterschrift: ''
+      bemerkungen: '', unterschrift: 'Eber Rocha'
     };
   }
   function makeAnkerRow(prefill){
@@ -607,6 +718,20 @@
       if(mergedPersonal.length) ap.personal = (ap.personal||[]).concat(mergedPersonal);
       delete tag.categories.bohren; delete tag.categories.versetzen; delete tag.categories.spannen;
     }
+    /* Anker / Pfähle used to be a single set of fields (qty:{...}); it is
+       now a repeatable list of rows, each with its own Typ/Bohren/etc. —
+       fold whatever was already filled in into the first row. */
+    if(tag.categories.anker_pfaehle){
+      var apCat = tag.categories.anker_pfaehle;
+      if(apCat.qty && !apCat.rows){
+        apCat.rows = [ apCat.qty ];
+        delete apCat.qty;
+      }
+      if(!apCat.rows || !apCat.rows.length){
+        var apDef = CATS.filter(function(x){ return x.key==='anker_pfaehle'; })[0];
+        apCat.rows = [ apDef ? freshCatRow(apDef) : {typ:'',bohren_m:'',versetzen_m:'',spannen_stk:''} ];
+      }
+    }
     var legacyDiverses = tag.categories.diverses;
     if(legacyDiverses && legacyDiverses.qty && legacyDiverses.qty.beschreibung){
       tag.bemerkungen = (tag.bemerkungen ? tag.bemerkungen + ' | ' : '') + 'Diverses (alt): ' + legacyDiverses.qty.beschreibung;
@@ -614,13 +739,43 @@
     if(legacyDiverses) delete tag.categories.diverses;
     if(!tag.diverses) tag.diverses = freshDiverses();
     else DIVERSE_OPTIONS.forEach(function(o){ if(!tag.diverses[o.key]) tag.diverses[o.key] = {selected:false, personal:[], remark:''}; });
+    /* "Platten ersetzen" used to be its own Diverses checkbox; it is now a
+       fixed remark under "Aliva 257 Top" instead — fold any already-recorded
+       selection/hours into that option so nothing gets silently dropped. */
+    if(tag.diverses.platten_ersetzen){
+      var legacyPE = tag.diverses.platten_ersetzen;
+      if(legacyPE.selected){
+        if(!tag.diverses.aliva_257) tag.diverses.aliva_257 = {selected:false, personal:[], remark:''};
+        tag.diverses.aliva_257.selected = true;
+        if(legacyPE.personal && legacyPE.personal.length){
+          tag.diverses.aliva_257.personal = (tag.diverses.aliva_257.personal||[]).concat(legacyPE.personal);
+        }
+      }
+      delete tag.diverses.platten_ersetzen;
+    }
+    /* Backfill default remarks (e.g. "Platten ersetzen" under Aliva 257 Top)
+       for anyone whose entry already exists but was never given one — the
+       field stays a normal editable one, this just saves typing. */
+    DIVERSE_OPTIONS.forEach(function(o){
+      if(o.defaultRemark && tag.diverses[o.key] && !tag.diverses[o.key].remark){
+        tag.diverses[o.key].remark = o.defaultRemark;
+      }
+    });
+    if(!tag.unterschrift) tag.unterschrift = 'Eber Rocha';
   })();
 
   CATS.forEach(function(c){
-    if(!tag.categories[c.key]) tag.categories[c.key] = {qty:{}, personal:[]};
+    if(!tag.categories[c.key]) tag.categories[c.key] = c.multiRow ? {rows:[], personal:[]} : {qty:{}, personal:[]};
     if(!tag.categories[c.key].personal) tag.categories[c.key].personal = [];
-    if(!tag.categories[c.key].qty) tag.categories[c.key].qty = {};
-    c.qty.forEach(function(f){ if(tag.categories[c.key].qty[f.k]===undefined) tag.categories[c.key].qty[f.k]=''; });
+    if(c.multiRow){
+      if(!tag.categories[c.key].rows || !tag.categories[c.key].rows.length) tag.categories[c.key].rows = [ freshCatRow(c) ];
+      tag.categories[c.key].rows.forEach(function(row){
+        c.qty.forEach(function(f){ if(row[f.k]===undefined) row[f.k]=''; });
+      });
+    } else {
+      if(!tag.categories[c.key].qty) tag.categories[c.key].qty = {};
+      c.qty.forEach(function(f){ if(tag.categories[c.key].qty[f.k]===undefined) tag.categories[c.key].qty[f.k]=''; });
+    }
   });
   var anker = Object.assign({ etappe:'', rows:[ makeAnkerRow() ] }, safeGet(LS.anker, {}));
   if(!anker.rows || !anker.rows.length) anker.rows = [ makeAnkerRow() ];
@@ -687,9 +842,45 @@
     t += sumDiversesStunden(tag.diverses);
     return t;
   }
+  /* Per-person breakdown — the same hours as totalStunden(), grouped by
+     who logged them, instead of one lump sum. Takes any tag snapshot (the
+     live one, or an archived one from Verlauf) so it also works for print. */
+  function personHoursMapFor(t){
+    var map = {};
+    function add(name, stundenRaw){
+      var n = parseFloat(stundenRaw);
+      if(isNaN(n)) return;
+      var key = (name||'').trim() || '(ohne Namen)';
+      map[key] = (map[key] || 0) + n;
+    }
+    CATS.forEach(function(c){
+      (t.categories[c.key] && t.categories[c.key].personal || []).forEach(function(p){ add(p.name, p.stunden); });
+    });
+    DIVERSE_OPTIONS.forEach(function(o){
+      var it = t.diverses && t.diverses[o.key];
+      if(!it) return;
+      (it.personal||[]).forEach(function(p){ add(p.name, p.stunden); });
+    });
+    return map;
+  }
+  function personHoursMap(){ return personHoursMapFor(tag); }
+  function renderPersonTotals(){
+    var el = document.getElementById('totalPerPerson');
+    var map = personHoursMap();
+    var names = Object.keys(map);
+    if(!names.length){ el.innerHTML = ''; return; }
+    names.sort(function(a,b){ return a.localeCompare(b, 'de'); });
+    el.innerHTML = names.map(function(n){
+      return '<span>'+esc(n)+' <b>'+map[n].toLocaleString('de-CH')+'</b></span>';
+    }).join('');
+  }
+  function refreshTotals(){
+    document.getElementById('totalStunden').textContent = totalStunden().toLocaleString('de-CH');
+    renderPersonTotals();
+  }
   function personalRowHTML(name, stunden, attrs){
     return '<div class="personal-row" '+attrs+'>'+
-      '<div class="field name"><input type="text" list="personalOptions" placeholder="Personal" '+attrs+' data-pfield="name" value="'+esc(name)+'"></div>'+
+      '<div class="field name"><input type="text" data-list="personalOptions" placeholder="Personal" '+attrs+' data-pfield="name" value="'+esc(name)+'"></div>'+
       '<div class="field hrs"><input type="number" inputmode="decimal" placeholder="Std" '+attrs+' data-pfield="stunden" value="'+esc(stunden)+'"></div>'+
       '<button type="button" class="icon-btn danger" '+attrs+' data-remove-personal aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
     '</div>';
@@ -698,16 +889,31 @@
     var root = document.getElementById('catsContainer');
     var catsHtml = CATS.map(function(c){
       var st = tag.categories[c.key];
-      var qtyInputs = c.qty.map(function(f){
-        var listAttr = f.list ? ' list="'+f.list+'"' : '';
-        return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+(f.type==='number'?'number':'text')+'" '+(f.type==='number'?'inputmode="decimal"':'')+listAttr+' data-cat="'+c.key+'" data-qty="'+f.k+'" value="'+esc(st.qty[f.k])+'"></div>';
-      }).join('');
+      var qtyBlock;
+      if(c.multiRow){
+        qtyBlock = st.rows.map(function(row, ri){
+          var fields = c.qty.map(function(f){
+            var listAttr = f.list ? ' data-list="'+f.list+'"' : '';
+            return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+(f.type==='number'?'number':'text')+'" '+(f.type==='number'?'inputmode="decimal"':'')+listAttr+' data-cat="'+c.key+'" data-row="'+ri+'" data-qty="'+f.k+'" value="'+esc(row[f.k])+'"></div>';
+          }).join('');
+          return '<div class="row" style="align-items:flex-end">'+fields+
+            '<button type="button" class="icon-btn danger" data-cat-row-remove="'+c.key+'" data-row="'+ri+'" aria-label="Zeile entfernen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
+          '</div>';
+        }).join('') +
+        '<button type="button" class="add-link" data-add-row="'+c.key+'"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Zeile hinzufügen</button>';
+      } else {
+        var qtyInputs = c.qty.map(function(f){
+          var listAttr = f.list ? ' data-list="'+f.list+'"' : '';
+          return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+(f.type==='number'?'number':'text')+'" '+(f.type==='number'?'inputmode="decimal"':'')+listAttr+' data-cat="'+c.key+'" data-qty="'+f.k+'" value="'+esc(st.qty[f.k])+'"></div>';
+        }).join('');
+        qtyBlock = qtyInputs ? '<div class="row">'+qtyInputs+'</div>' : '';
+      }
       var personalRows = st.personal.map(function(p, i){
         return personalRowHTML(p.name, p.stunden, 'data-cat="'+c.key+'" data-pidx="'+i+'"');
       }).join('');
       return '<div class="cat">'+
         '<div class="cat-title">'+esc(c.label)+'</div>'+
-        (qtyInputs ? '<div class="row">'+qtyInputs+'</div>' : '')+
+        qtyBlock+
         personalRows+
         '<button type="button" class="add-link" data-add-personal="'+c.key+'"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Personal / Stunden</button>'+
       '</div>';
@@ -736,7 +942,7 @@
     '</div>';
 
     root.innerHTML = catsHtml + diversesHtml;
-    document.getElementById('totalStunden').textContent = totalStunden().toLocaleString('de-CH');
+    refreshTotals();
   }
   document.getElementById('catsContainer').addEventListener('input', function(e){
     var t = e.target;
@@ -744,13 +950,19 @@
     var dv = t.getAttribute('data-dv');
     if(cat){
       if(t.hasAttribute('data-qty')){
-        tag.categories[cat].qty[t.getAttribute('data-qty')] = t.value;
+        var qtyKey = t.getAttribute('data-qty');
+        if(t.hasAttribute('data-row')){
+          tag.categories[cat].rows[parseInt(t.getAttribute('data-row'),10)][qtyKey] = t.value;
+        } else {
+          tag.categories[cat].qty[qtyKey] = t.value;
+        }
         saveTag();
       } else if(t.hasAttribute('data-pfield')){
         var idx = parseInt(t.getAttribute('data-pidx'),10);
         tag.categories[cat].personal[idx][t.getAttribute('data-pfield')] = t.value;
         saveTag();
-        if(t.getAttribute('data-pfield')==='stunden') document.getElementById('totalStunden').textContent = totalStunden().toLocaleString('de-CH');
+        var pf1 = t.getAttribute('data-pfield');
+        if(pf1==='stunden') refreshTotals(); else if(pf1==='name') renderPersonTotals();
       }
     } else if(t.hasAttribute('data-dv-remark')){
       tag.diverses[t.getAttribute('data-dv-remark')].remark = t.value;
@@ -759,7 +971,8 @@
       var didx = parseInt(t.getAttribute('data-pidx'),10);
       tag.diverses[dv].personal[didx][t.getAttribute('data-pfield')] = t.value;
       saveTag();
-      if(t.getAttribute('data-pfield')==='stunden') document.getElementById('totalStunden').textContent = totalStunden().toLocaleString('de-CH');
+      var pf2 = t.getAttribute('data-pfield');
+      if(pf2==='stunden') refreshTotals(); else if(pf2==='name') renderPersonTotals();
     } else if(t.hasAttribute('data-dv-toggle')){
       var key = t.getAttribute('data-dv-toggle');
       tag.diverses[key].selected = t.checked;
@@ -777,6 +990,24 @@
       tag.diverses[dvAddBtn.getAttribute('data-dv-add-personal')].personal.push({name:'', stunden:''});
       saveTag(); renderCats(); return;
     }
+    var addRowBtn = e.target.closest('[data-add-row]');
+    if(addRowBtn){
+      var rck = addRowBtn.getAttribute('data-add-row');
+      var cDef = CATS.filter(function(x){ return x.key===rck; })[0];
+      if(cDef){ tag.categories[rck].rows.push(freshCatRow(cDef)); saveTag(); renderCats(); }
+      return;
+    }
+    var rowRmBtn = e.target.closest('[data-cat-row-remove]');
+    if(rowRmBtn){
+      var rrck = rowRmBtn.getAttribute('data-cat-row-remove');
+      var rowsArr = tag.categories[rrck].rows;
+      rowsArr.splice(parseInt(rowRmBtn.getAttribute('data-row'),10), 1);
+      if(!rowsArr.length){
+        var cDef2 = CATS.filter(function(x){ return x.key===rrck; })[0];
+        rowsArr.push(cDef2 ? freshCatRow(cDef2) : {});
+      }
+      saveTag(); renderCats(); return;
+    }
     var rmBtn = e.target.closest('[data-remove-personal]');
     if(rmBtn){
       var cat = rmBtn.getAttribute('data-cat');
@@ -792,7 +1023,7 @@
     var root = document.getElementById('ankerPfaehleContainer');
     root.innerHTML = tag.material.ankerPfaehle.map(function(r, i){
       return '<div class="row" data-apidx="'+i+'" style="align-items:flex-end">'+
-        '<div class="field"><label>Typ</label><input type="text" list="typOptions" data-ap="typ" data-apidx="'+i+'" value="'+esc(r.typ)+'"></div>'+
+        '<div class="field"><label>Typ</label><input type="text" data-list="typOptions" data-ap="typ" data-apidx="'+i+'" value="'+esc(r.typ)+'"></div>'+
         '<div class="field"><label>L</label><input type="number" inputmode="decimal" data-ap="l" data-apidx="'+i+'" value="'+esc(r.l)+'"></div>'+
         '<div class="field"><label>Stk.</label><input type="number" inputmode="decimal" data-ap="stk" data-apidx="'+i+'" value="'+esc(r.stk)+'"></div>'+
         '<button type="button" class="icon-btn danger" data-ap-remove="'+i+'" aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
@@ -838,7 +1069,7 @@
     var root = document.getElementById('ankerRowsContainer');
     root.innerHTML = anker.rows.map(function(r, i){
       var inputs = ANKER_FIELDS.map(function(f){
-        var listAttr = f.list ? ' list="'+f.list+'"' : '';
+        var listAttr = f.list ? ' data-list="'+f.list+'"' : '';
         return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+f.type+'" '+(f.type==='number'?'inputmode="decimal"':'')+listAttr+' data-arf="'+f.k+'" data-aridx="'+i+'" value="'+esc(r[f.k])+'"></div>';
       }).join('');
       return '<div class="anker-row" data-aridx="'+i+'">'+
@@ -1063,6 +1294,12 @@
     return parts.length ? parts.join(', ') : '—';
   }
   function catQtyText(c, st){
+    if(c.multiRow){
+      var lines = (st.rows||[]).map(function(row){
+        return c.qty.map(function(f){ return row[f.k] ? (f.label+': '+esc(row[f.k])) : ''; }).filter(Boolean).join(' · ');
+      }).filter(function(s){ return s; });
+      return lines.length ? lines.join('<br>') : '—';
+    }
     return c.qty.map(function(f){ return st.qty[f.k] ? (f.label+': '+esc(st.qty[f.k])) : ''; }).filter(Boolean).join(' · ') || '—';
   }
   function printHeaderHTML(title){
@@ -1078,6 +1315,14 @@
       return '<tr><td>Diverses – '+esc(o.label)+'</td><td>'+(it.remark?esc(it.remark):'—')+'</td><td>'+personalText(it.personal)+'</td></tr>';
     }).join('');
     rows += diverseRows;
+    var ppMap = personHoursMapFor(t);
+    var ppNames = Object.keys(ppMap).sort(function(a,b){ return a.localeCompare(b, 'de'); });
+    var ppSection = ppNames.length ? (
+      '<div class="section">Personal – Stunden total</div>'+
+      '<table><tr><th style="width:60%">Name</th><th>Stunden</th></tr>'+
+      ppNames.map(function(n){ return '<tr><td>'+esc(n)+'</td><td>'+ppMap[n].toLocaleString('de-CH')+'</td></tr>'; }).join('')+
+      '</table>'
+    ) : '';
     var ap = t.material.ankerPfaehle.filter(function(r){return r.typ||r.l||r.stk;}).map(function(r){
       return esc(r.typ||'—')+' · L '+esc(r.l||'—')+' · Stk. '+esc(r.stk||'—');
     }).join('<br>') || '—';
@@ -1088,6 +1333,7 @@
       '<div class="section">Aufgeführte Arbeiten</div>'+
       '<table><tr><th style="width:26%">Arbeit</th><th style="width:24%">Menge</th><th>Personal / Stunden</th></tr>'+rows+
       '<tr><td colspan="2"><b>Total Stunden</b></td><td><b>'+summarizeTag(t).toLocaleString('de-CH')+'</b></td></tr></table>'+
+      ppSection+
       '<div class="section">Material</div>'+
       '<table><tr><th style="width:26%">Anker/Pfähle</th><td>'+ap+'</td></tr>'+
       '<tr><th>Mörtel</th><td>'+esc(t.material.moertelTyp||'—')+' · '+esc(t.material.moertelKg||'—')+' kg</td></tr>'+
@@ -1099,7 +1345,8 @@
       '<table><tr><th>LKW Std</th><td>'+esc(t.fahrzeuge.lkwStd||'—')+'</td><th>PW km</th><td>'+esc(t.fahrzeuge.pwKm||'—')+'</td><th>Dieselbezug l</th><td>'+esc(t.fahrzeuge.dieselL||'—')+'</td></tr></table>'+
       '<div class="section">Bemerkungen</div>'+
       '<table><tr><td>'+esc(t.bemerkungen||'—')+'</td></tr></table>'+
-      '<div style="margin-top:14px;font-size:11px">Unterschrift: '+esc(t.unterschrift||'—')+'</div>';
+      '<div style="margin-top:18px;font-size:11px">Unterschrift:</div>'+
+      '<div style="font-family:\'Dancing Script\',cursive;font-weight:600;font-size:30px;margin-top:2px;">'+esc(t.unterschrift||'—')+'</div>';
     finishExport(html, false, 'Tagesrapport_' + (t.datum||todayISO()), btn);
   }
   function printAnker(etappe, rows, btn){
