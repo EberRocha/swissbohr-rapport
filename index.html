@@ -631,7 +631,6 @@
   }
 
   var CATS = [
-    {key:'fahrt', label:'Fahrt nach', qty:[{k:'ziel', label:'Ziel', type:'text'}]},
     {key:'anker_pfaehle', label:'Anker / Pfähle', multiRow:true, qty:[
       {k:'typ', label:'Typ', type:'text', list:'typOptions'},
       {k:'bohren_m', label:"Bohren m'", type:'number'},
@@ -734,6 +733,8 @@
       if(mergedPersonal.length) ap.personal = (ap.personal||[]).concat(mergedPersonal);
       delete tag.categories.bohren; delete tag.categories.versetzen; delete tag.categories.spannen;
     }
+    /* "Fahrt nach" was removed entirely — drop any leftover stored data. */
+    if(tag.categories.fahrt) delete tag.categories.fahrt;
     /* Anker / Pfähle used to be a single set of fields (qty:{...}); it is
        now a repeatable list of rows, each with its own Typ/Bohren/etc. —
        fold whatever was already filled in into the first row. */
