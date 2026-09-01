@@ -268,6 +268,11 @@
     text-transform:uppercase; letter-spacing:.05em;
   }
   #printSheet .section:first-of-type{ margin-top:0; }
+  /* If a table still spans more than one physical page (a very large
+     Ankerprotokoll-Etappe even after shrink-to-fit), repeat the column
+     headers on each page and don't let a single row get cut in half. */
+  #printSheet thead{ display: table-header-group; }
+  #printSheet tr{ page-break-inside: avoid; }
 
   @media print{
     header.top, .bottom-bar, .save-pill, .no-print{ display:none !important; }
@@ -1253,27 +1258,15 @@
     var imgData = canvas.toDataURL('image/jpeg', 0.92);
     var pageWmm = landscape ? 297 : 210, pageHmm = landscape ? 210 : 297;
     var doc = new window.jspdf.jsPDF({ orientation: landscape ? 'landscape':'portrait', unit:'mm', format:'a4' });
-    var imgWmm = pageWmm - 20;
-    var imgHmm = imgWmm * canvas.height / canvas.width;
-    var pageContentHmm = pageHmm - 20;
-    if (imgHmm <= pageContentHmm){
-      doc.addImage(imgData, 'JPEG', 10, 10, imgWmm, imgHmm);
-    } else {
-      var sliceCanvasHeightPx = Math.max(1, Math.floor(canvas.height * pageContentHmm / imgHmm));
-      var totalPages = Math.ceil(canvas.height / sliceCanvasHeightPx);
-      for (var p = 0; p < totalPages; p++){
-        if (p > 0) doc.addPage();
-        var sy = p * sliceCanvasHeightPx;
-        var sh = Math.min(sliceCanvasHeightPx, canvas.height - sy);
-        var pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width; pageCanvas.height = sh;
-        var ctx = pageCanvas.getContext('2d');
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        ctx.drawImage(canvas, 0, sy, canvas.width, sh, 0, 0, canvas.width, sh);
-        var sliceHmm = imgWmm * sh / canvas.width;
-        doc.addImage(pageCanvas.toDataURL('image/jpeg', 0.92), 'JPEG', 10, 10, imgWmm, sliceHmm);
-      }
+    var maxWmm = pageWmm - 20, maxHmm = pageHmm - 20;
+    var imgWmm = maxWmm, imgHmm = maxWmm * canvas.height / canvas.width;
+    if (imgHmm > maxHmm){
+      // Always one page: if full width would overflow the page height,
+      // scale to the height instead so the whole report still fits.
+      imgHmm = maxHmm; imgWmm = maxHmm * canvas.width / canvas.height;
     }
+    var x = 10 + (maxWmm - imgWmm) / 2;
+    doc.addImage(imgData, 'JPEG', x, 10, imgWmm, imgHmm);
     return doc.output('blob');
   }
 
@@ -1285,7 +1278,9 @@
 
   async function finishExport(html, landscape, filenameBase, btn){
     setPageOrientation(landscape ? 'landscape' : 'portrait');
-    document.getElementById('printSheet').innerHTML = html;
+    var sheet = document.getElementById('printSheet');
+    sheet.style.width = landscape ? '1100px' : '780px';
+    sheet.innerHTML = html;
     var usedDownloads = false;
     if (window.claude && typeof window.claude.use === 'function'){
       setBtnBusy(btn, true, 'PDF wird erstellt…');
@@ -1337,46 +1332,62 @@
       '<div class="ph"><span class="swiss">swiss</span>bohr<div style="font-size:10px;font-weight:600;letter-spacing:.03em">Spezialtiefbau AG</div></div></div>';
   }
   function printTag(t, btn){
+    /* Only categories that actually have a quantity or personnel recorded
+       are printed — an untouched category adds a "—" row that wastes
+       vertical space without telling the reader anything. */
     var rows = CATS.map(function(c){
       var st = t.categories[c.key] || {qty:{}, personal:[]};
-      return '<tr><td>'+esc(c.label)+'</td><td>'+catQtyText(c, st)+'</td><td>'+personalText(st.personal)+'</td></tr>';
-    }).join('');
+      return {label:c.label, qty:catQtyText(c, st), personal:personalText(st.personal)};
+    }).filter(function(r){ return r.qty !== '—' || r.personal !== '—'; });
+    var rowsHtml = rows.length ? rows.map(function(r){
+      return '<tr><td>'+esc(r.label)+'</td><td>'+r.qty+'</td><td>'+r.personal+'</td></tr>';
+    }).join('') : '<tr><td colspan="3">Keine Arbeiten erfasst</td></tr>';
     var diverseSelected = DIVERSE_OPTIONS.filter(function(o){ return t.diverses && t.diverses[o.key] && t.diverses[o.key].selected; });
     var diversesSection = diverseSelected.length ? (
       '<div class="section">Diverses</div>'+
-      '<table><tr><th style="width:30%">Punkt</th><th style="width:26%">Bemerkung</th><th>Personal / Stunden</th></tr>'+
+      '<table><thead><tr><th style="width:30%">Punkt</th><th style="width:26%">Bemerkung</th><th>Personal / Stunden</th></tr></thead><tbody>'+
         diverseSelected.map(function(o){
           var it = t.diverses[o.key];
           return '<tr><td>'+esc(o.label)+'</td><td>'+(it.remark?esc(it.remark):'—')+'</td><td>'+personalText(it.personal)+'</td></tr>';
         }).join('')+
-      '</table>'
+      '</tbody></table>'
     ) : '';
     var ppMap = personHoursMapFor(t);
     var ppNames = Object.keys(ppMap).sort(function(a,b){ return a.localeCompare(b, 'de'); });
-    var ppSection =
+    var ppSection = ppNames.length ? (
       '<div class="section">Personal – Stunden total</div>'+
-      '<table><tr><th style="width:60%">Name</th><th>Stunden</th></tr>'+
+      '<table><thead><tr><th style="width:60%">Name</th><th>Stunden</th></tr></thead><tbody>'+
       ppNames.map(function(n){ return '<tr><td>'+esc(n)+'</td><td>'+ppMap[n].toLocaleString('de-CH')+'</td></tr>'; }).join('')+
       '<tr><td><b>Total Stunden</b></td><td><b>'+summarizeTag(t).toLocaleString('de-CH')+'</b></td></tr>'+
-      '</table>';
+      '</tbody></table>'
+    ) : '';
     var ap = t.material.ankerPfaehle.filter(function(r){return r.typ||r.l||r.stk;}).map(function(r){
       return esc(r.typ||'—')+' · L '+esc(r.l||'—')+' · Stk. '+esc(r.stk||'—');
     }).join('<br>') || '—';
+    /* Same idea for Material: a row is only printed when at least one of
+       its fields was actually filled in. */
+    var materialRows = [
+      {label:'Anker/Pfähle', value: ap !== '—' ? ap : null},
+      {label:'Mörtel', value: (t.material.moertelTyp||t.material.moertelKg) ? (esc(t.material.moertelTyp||'—')+' · '+esc(t.material.moertelKg||'—')+' kg') : null},
+      {label:'Netze', value: (t.material.netzeTyp||t.material.netzeM2) ? (esc(t.material.netzeTyp||'—')+' · '+esc(t.material.netzeM2||'—')+' m²') : null},
+      {label:'Gunit', value: (t.material.gunitTyp||t.material.gunitM3) ? (esc(t.material.gunitTyp||'—')+' · '+esc(t.material.gunitM3||'—')+' m³ lose') : null},
+      {label:'Zusätze', value: (t.material.zusaetzeTyp||t.material.zusaetzeKgL) ? (esc(t.material.zusaetzeTyp||'—')+' · '+esc(t.material.zusaetzeKgL||'—')+' l/std.') : null},
+      {label:'Diverses', value: t.material.diversesMaterial ? esc(t.material.diversesMaterial) : null}
+    ].filter(function(r){ return r.value; });
+    var materialSection = materialRows.length ? (
+      '<div class="section">Material</div><table>'+
+      materialRows.map(function(r){ return '<tr><th style="width:26%">'+esc(r.label)+'</th><td>'+r.value+'</td></tr>'; }).join('')+
+      '</table>'
+    ) : '';
     var html = printHeaderHTML('Tagesrapport') +
       '<div class="meta"><div><b>Auftraggeber:</b> '+esc(common.auftraggeber||'—')+'</div>'+
       '<div><b>Baustelle:</b> '+esc(common.baustelle||'—')+'</div>'+
       '<div><b>Datum:</b> '+esc(fmtDate(t.datum))+' &nbsp; <b>Wetter:</b> '+esc(t.wetter||'—')+'</div></div>'+
       '<div class="section">Aufgeführte Arbeiten</div>'+
-      '<table><tr><th style="width:26%">Arbeit</th><th style="width:24%">Menge</th><th>Personal / Stunden</th></tr>'+rows+'</table>'+
+      '<table><thead><tr><th style="width:26%">Arbeit</th><th style="width:24%">Menge</th><th>Personal / Stunden</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+
       diversesSection+
       ppSection+
-      '<div class="section">Material</div>'+
-      '<table><tr><th style="width:26%">Anker/Pfähle</th><td>'+ap+'</td></tr>'+
-      '<tr><th>Mörtel</th><td>'+esc(t.material.moertelTyp||'—')+' · '+esc(t.material.moertelKg||'—')+' kg</td></tr>'+
-      '<tr><th>Netze</th><td>'+esc(t.material.netzeTyp||'—')+' · '+esc(t.material.netzeM2||'—')+' m²</td></tr>'+
-      '<tr><th>Gunit</th><td>'+esc(t.material.gunitTyp||'—')+' · '+esc(t.material.gunitM3||'—')+' m³ lose</td></tr>'+
-      '<tr><th>Zusätze</th><td>'+esc(t.material.zusaetzeTyp||'—')+' · '+esc(t.material.zusaetzeKgL||'—')+' l/std.</td></tr>'+
-      '<tr><th>Diverses</th><td>'+esc(t.material.diversesMaterial||'—')+'</td></tr></table>'+
+      materialSection+
       '<div class="section">Bemerkungen</div>'+
       '<table><tr><td>'+esc(t.bemerkungen||'—')+'</td></tr></table>'+
       '<div style="margin-top:24px;width:240px;">'+
@@ -1396,7 +1407,11 @@
     var html = printHeaderHTML('Ankerprotokoll') +
       '<div class="meta"><div><b>Auftraggeber:</b> '+esc(common.auftraggeber||'—')+'</div>'+
       '<div><b>Baustelle:</b> '+esc(common.baustelle||'—')+' &nbsp; <b>Etappe:</b> '+esc(etappe||'—')+'</div></div>'+
-      '<table>'+head+body+'</table>';
+      /* thead/tbody (rather than a flat list of <tr>s) lets the browser
+         repeat the column headers on every page if a very large Etappe
+         still doesn't fit on one page even after shrinking — see
+         #printSheet thead in the print CSS. */
+      '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
     finishExport(html, true, 'Ankerprotokoll_' + (etappe || todayISO()), btn);
   }
   document.getElementById('btnExportTag').addEventListener('click', function(e){ printTag(tag, e.currentTarget); });
