@@ -99,9 +99,13 @@
   .brand .sub{ font-size:10.5px; color: var(--muted); text-transform:uppercase; letter-spacing:.08em; }
   .common-fields{ display:flex; gap:8px; padding-bottom:10px; }
   .common-fields .field{ margin-bottom:0; }
-  .tabs{ display:flex; gap:2px; }
+  /* A grid (2 per row) rather than one flex row of 4 — on a phone-width
+     screen four flex:1 tabs squeeze "Ankerprotokoll"/"Pfahlprotokoll" down
+     to where the last tab gets clipped. Two rows keeps every label legible
+     at any width. */
+  .tabs{ display:grid; grid-template-columns: repeat(2, 1fr); gap:2px; }
   .tab{
-    flex:1; text-align:center; padding:10px 6px; font-family: var(--font-display); font-weight:600;
+    text-align:center; padding:10px 6px; font-family: var(--font-display); font-weight:600;
     font-size:14.5px; color: var(--muted); background:none; border:none; border-bottom:3px solid transparent;
     cursor:pointer;
   }
@@ -295,6 +299,10 @@
   <option value="KSB R32-15"></option><option value="KSB R38"></option><option value="KSB R51"></option>
   <option value="KSB T76 6T"></option><option value="KSB T76 8T"></option><option value="KSB T76 10T"></option>
   <option value="KSB T76 12T"></option><option value="KSB T114"></option>
+  <option value="Stange T45 mit 130 mm Krone"></option>
+</datalist>
+<datalist id="wandEtappeOptions">
+  <option value="Nagelwand 1"></option><option value="Nagelwand 2"></option><option value="Nagelwand 3"></option><option value="Nagelwand 4"></option><option value="Nagelwand 5"></option><option value="Nagelwand 6"></option><option value="Nagelwand 7"></option><option value="Nagelwand 8"></option><option value="Nagelwand 9"></option><option value="Nagelwand 10"></option><option value="Nagelwand 11"></option><option value="Nagelwand 12"></option><option value="Nagelwand 13"></option><option value="Nagelwand 14"></option><option value="Nagelwand 15"></option><option value="Nagelwand 16"></option><option value="Nagelwand 17"></option><option value="Nagelwand 18"></option><option value="Nagelwand 19"></option><option value="Nagelwand 20"></option><option value="Böschung Sicherung"></option><option value="Geröllwand"></option><option value="Bohrpfahlwand 1"></option><option value="Bohrpfahlwand 2"></option><option value="Bohrpfahlwand 3"></option><option value="Bohrpfahlwand 4"></option><option value="Bohrpfahlwand 5"></option><option value="Bohrpfahlwand 6"></option><option value="Bohrpfahlwand 7"></option><option value="Bohrpfahlwand 8"></option><option value="Bohrpfahlwand 9"></option><option value="Bohrpfahlwand 10"></option><option value="Bohrpfahlwand 11"></option><option value="Bohrpfahlwand 12"></option><option value="Bohrpfahlwand 13"></option><option value="Bohrpfahlwand 14"></option><option value="Bohrpfahlwand 15"></option><option value="Bohrpfahlwand 16"></option><option value="Bohrpfahlwand 17"></option><option value="Bohrpfahlwand 18"></option><option value="Bohrpfahlwand 19"></option><option value="Bohrpfahlwand 20"></option><option value="Trägerwand 1"></option><option value="Trägerwand 2"></option><option value="Trägerwand 3"></option><option value="Trägerwand 4"></option><option value="Trägerwand 5"></option><option value="Trägerwand 6"></option><option value="Trägerwand 7"></option><option value="Trägerwand 8"></option><option value="Trägerwand 9"></option><option value="Trägerwand 10"></option><option value="Trägerwand 11"></option><option value="Trägerwand 12"></option><option value="Trägerwand 13"></option><option value="Trägerwand 14"></option><option value="Trägerwand 15"></option><option value="Trägerwand 16"></option><option value="Trägerwand 17"></option><option value="Trägerwand 18"></option><option value="Trägerwand 19"></option><option value="Trägerwand 20"></option><option value="Zusätzliche Gunitwände"></option>
 </datalist>
 <datalist id="netzeTypOptions">
   <option value="K188"></option><option value="K335"></option><option value="B500a"></option><option value="B500b"></option>
@@ -329,6 +337,7 @@
   <div class="tabs" role="tablist">
     <button class="tab" id="tabBtnTag" role="tab" aria-selected="true">Tagesrapport</button>
     <button class="tab" id="tabBtnAnker" role="tab" aria-selected="false">Ankerprotokoll</button>
+    <button class="tab" id="tabBtnPfahl" role="tab" aria-selected="false">Pfahlprotokoll</button>
     <button class="tab" id="tabBtnHist" role="tab" aria-selected="false">Verlauf</button>
   </div>
 </header>
@@ -410,12 +419,21 @@
   <!-- ANKERPROTOKOLL -->
   <section class="panel" id="panelAnker">
     <div id="ankerBanner"></div>
-    <div class="field"><label for="etappe">Etappe</label><input id="etappe" type="text" placeholder="z. B. Etappe 2"></div>
+    <div class="field"><label for="etappe">Etappe</label><input id="etappe" type="text" data-list="wandEtappeOptions" placeholder="z. B. Etappe 2"></div>
 
     <div class="section-label">Anker</div>
     <div id="ankerRowsContainer"></div>
     <button type="button" class="add-link" id="addAnkerRow">
       <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neuer Anker
+    </button>
+  </section>
+
+  <!-- PFAHLPROTOKOLL -->
+  <section class="panel" id="panelPfahl">
+    <div class="section-label">Pfähle</div>
+    <div id="pfahlRowsContainer"></div>
+    <button type="button" class="add-link" id="addPfahlRow">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neuer Pfahl
     </button>
   </section>
 
@@ -425,6 +443,8 @@
     <div id="histTagList"></div>
     <div class="section-label" style="margin-top:18px">Abgeschlossene Etappen</div>
     <div id="histEtappeList"></div>
+    <div class="section-label" style="margin-top:18px">Abgeschlossene Pfahlprotokolle</div>
+    <div id="histPfahlList"></div>
   </section>
 
 </main>
@@ -445,6 +465,14 @@
     <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Als PDF exportieren
   </button>
 </div>
+<div class="bottom-bar no-print" id="barPfahl" style="display:none">
+  <button class="btn ghost" id="btnNewPfahlListe">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7M21 4v5h-5"/></svg> Liste abschliessen
+  </button>
+  <button class="btn primary" id="btnExportPfahl">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Als PDF exportieren
+  </button>
+</div>
 
 <div id="printSheet"></div>
 
@@ -452,7 +480,7 @@
 (function(){
   "use strict";
 
-  var LS = { common:"sb_common_v1", tag:"sb_tag_v1", anker:"sb_anker_v1", hist:"sb_hist_v1" };
+  var LS = { common:"sb_common_v1", tag:"sb_tag_v1", anker:"sb_anker_v1", pfahl:"sb_pfahl_v1", hist:"sb_hist_v1" };
 
   function todayISO(){
     var d = new Date();
@@ -665,7 +693,14 @@
     {key:'material_winterdienst', label:'Material Winterdienst'},
     {key:'stromausfall', label:'Stromausfall'},
     {key:'kompressor_parkdienst', label:'Kompressor Parkdienst'},
-    {key:'bohrwagen_parkdienst', label:'Bohrwagen Parkdienst', hint:'Öl nachfüllen, Raupen putzen usw.'}
+    {key:'bohrwagen_parkdienst', label:'Bohrwagen Parkdienst', hint:'Öl nachfüllen, Raupen putzen usw.'},
+    {key:'bauwand_ein_abbauen', label:'Bauwand ein- oder abbauen'},
+    {key:'neue_baustellen_anschauen', label:'Neue Baustellen anschauen'},
+    {key:'beihilfe_absperrung', label:'Beihilfe Absperrung'},
+    {key:'bausitzung', label:'Bausitzung'},
+    {key:'ug_installieren', label:'UG installieren'},
+    {key:'ug_flicken', label:'UG flicken'},
+    {key:'diverse_arbeiten', label:'Diverse Arbeiten'}
   ];
 
   function freshCatRow(c){
@@ -714,6 +749,14 @@
       datum: prefill.datum || todayISO(), wand: prefill.wand || '', lage: prefill.lage || '', nr: prefill.nr || '',
       ankertyp: prefill.ankertyp || '', ankerlaenge: '', freieLaenge: '',
       primZement: '', primDruck: '', nachZement: '', nachDruck: '', pruflast: '', bemerkungen: ''
+    };
+  }
+  function makePfahlRow(prefill){
+    prefill = prefill || {};
+    return {
+      datum: prefill.datum || todayISO(), etappe: prefill.etappe || '', nr: prefill.nr || '',
+      pfahltyp: prefill.pfahltyp || '', pfahllaenge: '',
+      primZement: '', primDruck: '', nachZement: '', nachDruck: '', bemerkungen: ''
     };
   }
 
@@ -802,13 +845,17 @@
   });
   var anker = Object.assign({ etappe:'', rows:[ makeAnkerRow() ] }, safeGet(LS.anker, {}));
   if(!anker.rows || !anker.rows.length) anker.rows = [ makeAnkerRow() ];
-  var hist = Object.assign({ tage:[], etapas:[] }, safeGet(LS.hist, {}));
+  var pfahl = Object.assign({ rows:[ makePfahlRow() ] }, safeGet(LS.pfahl, {}));
+  if(!pfahl.rows || !pfahl.rows.length) pfahl.rows = [ makePfahlRow() ];
+  var hist = Object.assign({ tage:[], etapas:[], pfaehle:[] }, safeGet(LS.hist, {}));
   if(!hist.tage) hist.tage = [];
   if(!hist.etapas) hist.etapas = [];
+  if(!hist.pfaehle) hist.pfaehle = [];
 
   function saveCommon(){ safeSet(LS.common, common); flashSaved(); }
   function saveTag(){ safeSet(LS.tag, tag); flashSaved(); }
   function saveAnker(){ safeSet(LS.anker, anker); flashSaved(); }
+  function savePfahl(){ safeSet(LS.pfahl, pfahl); flashSaved(); }
   function saveHist(){ safeSet(LS.hist, hist); flashSaved(); }
 
   /* ---------- simple bound fields ---------- */
@@ -838,6 +885,7 @@
   var tabs = [
     {btn:'tabBtnTag', panel:'panelTag', bar:'barTag'},
     {btn:'tabBtnAnker', panel:'panelAnker', bar:'barAnker'},
+    {btn:'tabBtnPfahl', panel:'panelPfahl', bar:'barPfahl'},
     {btn:'tabBtnHist', panel:'panelHist', bar:null}
   ];
   function selectTab(name){
@@ -851,6 +899,7 @@
   }
   document.getElementById('tabBtnTag').addEventListener('click', function(){ selectTab('panelTag'); });
   document.getElementById('tabBtnAnker').addEventListener('click', function(){ selectTab('panelAnker'); });
+  document.getElementById('tabBtnPfahl').addEventListener('click', function(){ selectTab('panelPfahl'); });
   document.getElementById('tabBtnHist').addEventListener('click', function(){ selectTab('panelHist'); });
 
   /* ---------- Aufgeführte Arbeiten / categories ---------- */
@@ -1083,7 +1132,7 @@
   /* ---------- Ankerprotokoll rows ---------- */
   var ANKER_FIELDS = [
     {k:'datum', label:'Datum', type:'date'},
-    {k:'wand', label:'Wand', type:'text'},
+    {k:'wand', label:'Wand', type:'text', list:'wandEtappeOptions'},
     {k:'lage', label:'Lage', type:'text'},
     {k:'nr', label:'Nr.', type:'text'},
     {k:'ankertyp', label:'Ankertyp', type:'text', list:'typOptions'},
@@ -1155,6 +1204,78 @@
     saveAnker(); renderAnkerRows();
   });
 
+  /* ---------- Pfahlprotokoll rows ---------- */
+  var PFAHL_FIELDS = [
+    {k:'datum', label:'Datum', type:'date'},
+    {k:'etappe', label:'Etappe', type:'text', list:'wandEtappeOptions'},
+    {k:'nr', label:'Pfahl Nr.', type:'text'},
+    {k:'pfahltyp', label:'Pfahltyp', type:'text', list:'typOptions'},
+    {k:'pfahllaenge', label:'Pfahllänge [m]', type:'number'},
+    {k:'primZement', label:'Primär – Zement [kg]', type:'number'},
+    {k:'primDruck', label:'Primär – Druck [bar]', type:'number'},
+    {k:'nachZement', label:'Nachinj. – Zement [kg]', type:'number'},
+    {k:'nachDruck', label:'Nachinj. – Druck [bar]', type:'number'}
+  ];
+  function renderPfahlRows(){
+    var root = document.getElementById('pfahlRowsContainer');
+    root.innerHTML = pfahl.rows.map(function(r, i){
+      var inputs = PFAHL_FIELDS.map(function(f){
+        var listAttr = f.list ? ' data-list="'+f.list+'"' : '';
+        return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+f.type+'" '+(f.type==='number'?'inputmode="decimal"':'')+listAttr+' data-prf="'+f.k+'" data-pridx="'+i+'" value="'+esc(r[f.k])+'"></div>';
+      }).join('');
+      return '<div class="anker-row" data-pridx="'+i+'">'+
+        '<div class="anker-row-head"><span class="idx">Pfahl '+(i+1)+'</span>'+
+        '<div class="actions">'+
+        '<button type="button" class="icon-btn" data-pr-copy="'+i+'" aria-label="Kopieren"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>'+
+        '<button type="button" class="icon-btn danger" data-pr-remove="'+i+'" aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
+        '</div></div>'+
+        '<div class="grid2">'+inputs+'</div>'+
+        '<div class="field" style="margin-top:2px"><label>Bemerkungen</label><textarea rows="2" data-prf="bemerkungen" data-pridx="'+i+'">'+esc(r.bemerkungen)+'</textarea></div>'+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('pfahlRowsContainer').addEventListener('input', function(e){
+    var t = e.target;
+    if(t.hasAttribute('data-prf')){
+      pfahl.rows[parseInt(t.getAttribute('data-pridx'),10)][t.getAttribute('data-prf')] = t.value;
+      savePfahl();
+    }
+  });
+  document.getElementById('pfahlRowsContainer').addEventListener('click', function(e){
+    var cp = e.target.closest('[data-pr-copy]');
+    if(cp){
+      var srcIdx = parseInt(cp.getAttribute('data-pr-copy'),10);
+      var src = pfahl.rows[srcIdx];
+      showPrompt('Wie viele Kopien dieses Pfahls erstellen?<br><span class="hint-inline">Jede Kopie übernimmt alle Werte und kann danach einzeln angepasst werden.</span>', '1', function(val){
+        var n = parseInt(val,10);
+        if(!n || n<1) return;
+        if(n>50) n=50;
+        var mNr = /^(\d+)$/.exec(String(src.nr||'').trim());
+        for(var i=0;i<n;i++){
+          var copy = JSON.parse(JSON.stringify(src));
+          if(mNr) copy.nr = String(parseInt(mNr[1],10) + i + 1);
+          pfahl.rows.splice(srcIdx + 1 + i, 0, copy);
+        }
+        savePfahl(); renderPfahlRows();
+      });
+      return;
+    }
+    var rm = e.target.closest('[data-pr-remove]');
+    if(rm){
+      if(pfahl.rows.length <= 1){ pfahl.rows[0] = makePfahlRow(); }
+      else pfahl.rows.splice(parseInt(rm.getAttribute('data-pr-remove'),10),1);
+      savePfahl(); renderPfahlRows();
+    }
+  });
+  document.getElementById('addPfahlRow').addEventListener('click', function(){
+    var last = pfahl.rows[pfahl.rows.length-1] || {};
+    var nr = last.nr;
+    var m = /^(\d+)$/.exec(String(nr||'').trim());
+    var nextNr = m ? String(parseInt(m[1],10)+1) : '';
+    pfahl.rows.push(makePfahlRow({ datum: todayISO(), etappe:last.etappe, pfahltyp:last.pfahltyp, nr: nextNr }));
+    savePfahl(); renderPfahlRows();
+  });
+
   /* ---------- New day / new stage ---------- */
   function renderTagBanner(){
     var el = document.getElementById('tagBanner');
@@ -1171,6 +1292,12 @@
     std += sumDiversesStunden(t.diverses);
     return std;
   }
+  /* True if the live Tagesrapport still has none of its default values
+     touched — used so "einen Tag bearbeiten" doesn't archive a pointless
+     empty entry before loading the requested day. */
+  function tagIsEmpty(t){
+    return JSON.stringify(t) === JSON.stringify(freshTag(t.datum));
+  }
   function doNewDay(){
     showConfirm('Aktuellen Tagesrapport abschliessen und archivieren?<br>Ein neuer Tag wird begonnen.', function(){
       hist.tage.unshift({ id: 'd'+Date.now(), date: tag.datum, snapshot: JSON.parse(JSON.stringify(tag)) });
@@ -1181,6 +1308,26 @@
     });
   }
   document.getElementById('btnNewDay').addEventListener('click', doNewDay);
+
+  /* ---------- Edit an archived day from Verlauf ---------- */
+  function doEditTag(id){
+    var h = hist.tage.find(function(x){ return x.id === id; });
+    if(!h) return;
+    var keepsCurrent = !tagIsEmpty(tag);
+    var msg = 'Diesen Tagesrapport vom '+esc(fmtDate(h.date))+' zum Bearbeiten laden?'+
+      (keepsCurrent ? '<br>Der aktuell offene Tagesrapport wird zuerst automatisch in den Verlauf verschoben, damit nichts verloren geht.' : '');
+    showConfirm(msg, function(){
+      if(keepsCurrent){
+        hist.tage.unshift({ id:'d'+Date.now(), date: tag.datum, snapshot: JSON.parse(JSON.stringify(tag)) });
+      }
+      hist.tage = hist.tage.filter(function(x){ return x.id !== id; });
+      saveHist();
+      tag = Object.assign(freshTag(h.date), JSON.parse(JSON.stringify(h.snapshot)));
+      saveTag();
+      renderAll();
+      selectTab('panelTag');
+    });
+  }
 
   function doNewEtappe(){
     showConfirm('Aktuelle Etappe abschliessen und archivieren?<br>Die Ankerliste wird geleert.', function(){
@@ -1193,6 +1340,17 @@
   }
   document.getElementById('btnNewEtappe').addEventListener('click', doNewEtappe);
 
+  function doNewPfahlListe(){
+    showConfirm('Aktuelle Pfahlliste abschliessen und archivieren?<br>Die Liste wird geleert.', function(){
+      hist.pfaehle.unshift({ id:'p'+Date.now(), baustelle: common.baustelle, date: todayISO(), rows: JSON.parse(JSON.stringify(pfahl.rows)) });
+      saveHist();
+      pfahl = { rows:[ makePfahlRow() ] };
+      savePfahl();
+      renderAll();
+    });
+  }
+  document.getElementById('btnNewPfahlListe').addEventListener('click', doNewPfahlListe);
+
   /* ---------- History ---------- */
   function renderHistory(){
     var tagRoot = document.getElementById('histTagList');
@@ -1203,6 +1361,7 @@
         return '<div class="hist-item"><div class="meta"><div class="date">'+esc(fmtDate(h.date))+'</div>'+
           '<div class="sub">'+summarizeTag(h.snapshot).toLocaleString('de-CH')+' Std total</div></div>'+
           '<div class="hist-actions">'+
+          '<button type="button" class="icon-btn" data-hist-edit-tag="'+h.id+'" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
           '<button type="button" class="icon-btn" data-hist-print-tag="'+h.id+'" aria-label="Drucken"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button>'+
           '<button type="button" class="icon-btn danger" data-hist-del-tag="'+h.id+'" aria-label="Löschen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
           '</div></div>';
@@ -1221,8 +1380,23 @@
           '</div></div>';
       }).join('');
     }
+    var pfRoot = document.getElementById('histPfahlList');
+    if(!hist.pfaehle.length){
+      pfRoot.innerHTML = '<div class="hist-empty">Noch keine abgeschlossenen Pfahlprotokolle.</div>';
+    } else {
+      pfRoot.innerHTML = hist.pfaehle.map(function(h){
+        return '<div class="hist-item"><div class="meta"><div class="date">'+esc(fmtDate(h.date))+'</div>'+
+          '<div class="sub">'+h.rows.length+' Pfähle · abgeschlossen '+esc(fmtDate(h.date))+'</div></div>'+
+          '<div class="hist-actions">'+
+          '<button type="button" class="icon-btn" data-hist-print-pfahl="'+h.id+'" aria-label="Drucken"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button>'+
+          '<button type="button" class="icon-btn danger" data-hist-del-pfahl="'+h.id+'" aria-label="Löschen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
+          '</div></div>';
+      }).join('');
+    }
   }
   document.getElementById('panelHist').addEventListener('click', function(e){
+    var et = e.target.closest('[data-hist-edit-tag]');
+    if(et){ doEditTag(et.getAttribute('data-hist-edit-tag')); return; }
     var pt = e.target.closest('[data-hist-print-tag]');
     if(pt){ var h = hist.tage.find(function(x){return x.id===pt.getAttribute('data-hist-print-tag');}); if(h) printTag(h.snapshot, pt); return; }
     var dt = e.target.closest('[data-hist-del-tag]');
@@ -1231,6 +1405,10 @@
     if(pe){ var he = hist.etapas.find(function(x){return x.id===pe.getAttribute('data-hist-print-etappe');}); if(he) printAnker(he.etappe, he.rows, pe); return; }
     var de = e.target.closest('[data-hist-del-etappe]');
     if(de){ var idEt = de.getAttribute('data-hist-del-etappe'); showConfirm('Diesen Eintrag löschen?', function(){ hist.etapas = hist.etapas.filter(function(x){return x.id!==idEt;}); saveHist(); renderHistory(); }); return; }
+    var pp = e.target.closest('[data-hist-print-pfahl]');
+    if(pp){ var hp = hist.pfaehle.find(function(x){return x.id===pp.getAttribute('data-hist-print-pfahl');}); if(hp) printPfahl(hp.rows, pp); return; }
+    var dp = e.target.closest('[data-hist-del-pfahl]');
+    if(dp){ var idPf = dp.getAttribute('data-hist-del-pfahl'); showConfirm('Diesen Eintrag löschen?', function(){ hist.pfaehle = hist.pfaehle.filter(function(x){return x.id!==idPf;}); saveHist(); renderHistory(); }); return; }
   });
 
   /* ---------- Print / PDF export ----------
@@ -1414,8 +1592,23 @@
       '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
     finishExport(html, true, 'Ankerprotokoll_' + (etappe || todayISO()), btn);
   }
+  function printPfahl(rows, btn){
+    var head = '<tr><th>Datum</th><th>Etappe</th><th>Pfahl Nr.</th><th>Pfahltyp</th><th>Pfahllänge [m]</th>'+
+      '<th>Primär Zement [kg]</th><th>Primär Druck [bar]</th><th>Nachinj. Zement [kg]</th><th>Nachinj. Druck [bar]</th><th>Bemerkungen</th></tr>';
+    var body = rows.map(function(r){
+      return '<tr><td>'+esc(fmtDate(r.datum))+'</td><td>'+esc(r.etappe)+'</td><td>'+esc(r.nr)+'</td><td>'+esc(r.pfahltyp)+'</td>'+
+        '<td>'+esc(r.pfahllaenge)+'</td><td>'+esc(r.primZement)+'</td><td>'+esc(r.primDruck)+'</td>'+
+        '<td>'+esc(r.nachZement)+'</td><td>'+esc(r.nachDruck)+'</td><td>'+esc(r.bemerkungen)+'</td></tr>';
+    }).join('');
+    var html = printHeaderHTML('Pfahlprotokoll') +
+      '<div class="meta"><div><b>Auftraggeber:</b> '+esc(common.auftraggeber||'—')+'</div>'+
+      '<div><b>Baustelle:</b> '+esc(common.baustelle||'—')+'</div></div>'+
+      '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
+    finishExport(html, true, 'Pfahlprotokoll_' + todayISO(), btn);
+  }
   document.getElementById('btnExportTag').addEventListener('click', function(e){ printTag(tag, e.currentTarget); });
   document.getElementById('btnExportAnker').addEventListener('click', function(e){ printAnker(anker.etappe, anker.rows, e.currentTarget); });
+  document.getElementById('btnExportPfahl').addEventListener('click', function(e){ printPfahl(pfahl.rows, e.currentTarget); });
 
   /* ---------- init ---------- */
   function renderAll(){
@@ -1436,6 +1629,7 @@
     renderCats();
     renderAnkerPfaehle();
     renderAnkerRows();
+    renderPfahlRows();
     renderTagBanner();
   }
   renderAll();
