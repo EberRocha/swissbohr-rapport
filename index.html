@@ -673,6 +673,9 @@
         {k:'spannen_stk', label:'Stk.', type:'number'},
         {k:'spannen_kn', label:'Kn', type:'number'}
       ]}
+    ], personalGroups:[
+      {key:'bohren', label:'Bohren'},
+      {key:'versetzen', label:'Versetzen, injizieren'}
     ]},
     {key:'netze', label:'Netze – Schneiden, verlegen', qty:[{k:'m2', label:'Fläche m²', type:'number'}]},
     {key:'gunit', label:'Gunit – Spritzen', qty:[{k:'staerke', label:'Stärke cm', type:'number'}, {k:'m2', label:'Fläche m²', type:'number'}]}
@@ -764,13 +767,19 @@
   var tag = Object.assign(freshTag(todayISO()), safeGet(LS.tag, {}));
   if(!tag.categories) tag.categories = freshCategories();
 
-  /* One-time migration from the earlier schema (separate bohren/versetzen/
-     spannen categories and a free-text Diverses) into the current one. */
-  (function migrateTag(){
-    var legacyBohren = tag.categories.bohren, legacyVersetzen = tag.categories.versetzen, legacySpannen = tag.categories.spannen;
+  /* Migration from earlier schemas (separate bohren/versetzen/spannen
+     categories, a free-text Diverses, etc.) into the current one. Runs on
+     the live tag at startup, and — via normalizeTag() below — on every
+     archived snapshot loaded back for editing (doEditTag), so an old-shaped
+     entry never crashes or silently loses data just because the app's data
+     model moved on since it was saved. When the shape changes again in the
+     future, extend this function rather than assuming existing/archived
+     data already looks the way new data will. */
+  function migrateTag(t){
+    var legacyBohren = t.categories.bohren, legacyVersetzen = t.categories.versetzen, legacySpannen = t.categories.spannen;
     if(legacyBohren || legacyVersetzen || legacySpannen){
-      if(!tag.categories.anker_pfaehle) tag.categories.anker_pfaehle = {qty:{}, personal:[]};
-      var ap = tag.categories.anker_pfaehle;
+      if(!t.categories.anker_pfaehle) t.categories.anker_pfaehle = {qty:{}, personal:[]};
+      var ap = t.categories.anker_pfaehle;
       ap.qty.bohren_m = (legacyBohren && legacyBohren.qty && legacyBohren.qty.m) || ap.qty.bohren_m || '';
       ap.qty.versetzen_m = (legacyVersetzen && legacyVersetzen.qty && legacyVersetzen.qty.m) || ap.qty.versetzen_m || '';
       ap.qty.spannen_stk = (legacySpannen && legacySpannen.qty && legacySpannen.qty.stk) || ap.qty.spannen_stk || '';
@@ -779,15 +788,15 @@
         .concat((legacyVersetzen && legacyVersetzen.personal) || [])
         .concat((legacySpannen && legacySpannen.personal) || []);
       if(mergedPersonal.length) ap.personal = (ap.personal||[]).concat(mergedPersonal);
-      delete tag.categories.bohren; delete tag.categories.versetzen; delete tag.categories.spannen;
+      delete t.categories.bohren; delete t.categories.versetzen; delete t.categories.spannen;
     }
     /* "Fahrt nach" was removed entirely — drop any leftover stored data. */
-    if(tag.categories.fahrt) delete tag.categories.fahrt;
+    if(t.categories.fahrt) delete t.categories.fahrt;
     /* Anker / Pfähle used to be a single set of fields (qty:{...}); it is
        now a repeatable list of rows, each with its own Typ/Bohren/etc. —
        fold whatever was already filled in into the first row. */
-    if(tag.categories.anker_pfaehle){
-      var apCat = tag.categories.anker_pfaehle;
+    if(t.categories.anker_pfaehle){
+      var apCat = t.categories.anker_pfaehle;
       if(apCat.qty && !apCat.rows){
         apCat.rows = [ apCat.qty ];
         delete apCat.qty;
@@ -797,52 +806,64 @@
         apCat.rows = [ apDef ? freshCatRow(apDef) : {typ:'',bohren_m:'',versetzen_m:'',spannen_stk:'',spannen_kn:''} ];
       }
     }
-    var legacyDiverses = tag.categories.diverses;
+    var legacyDiverses = t.categories.diverses;
     if(legacyDiverses && legacyDiverses.qty && legacyDiverses.qty.beschreibung){
-      tag.bemerkungen = (tag.bemerkungen ? tag.bemerkungen + ' | ' : '') + 'Diverses (alt): ' + legacyDiverses.qty.beschreibung;
+      t.bemerkungen = (t.bemerkungen ? t.bemerkungen + ' | ' : '') + 'Diverses (alt): ' + legacyDiverses.qty.beschreibung;
     }
-    if(legacyDiverses) delete tag.categories.diverses;
-    if(!tag.diverses) tag.diverses = freshDiverses();
-    else DIVERSE_OPTIONS.forEach(function(o){ if(!tag.diverses[o.key]) tag.diverses[o.key] = {selected:false, personal:[], remark:''}; });
+    if(legacyDiverses) delete t.categories.diverses;
+    if(!t.diverses) t.diverses = freshDiverses();
+    else DIVERSE_OPTIONS.forEach(function(o){ if(!t.diverses[o.key]) t.diverses[o.key] = {selected:false, personal:[], remark:''}; });
     /* "Platten ersetzen" used to be its own Diverses checkbox; it is now a
        fixed remark under "Aliva 257 Top" instead — fold any already-recorded
        selection/hours into that option so nothing gets silently dropped. */
-    if(tag.diverses.platten_ersetzen){
-      var legacyPE = tag.diverses.platten_ersetzen;
+    if(t.diverses.platten_ersetzen){
+      var legacyPE = t.diverses.platten_ersetzen;
       if(legacyPE.selected){
-        if(!tag.diverses.aliva_257) tag.diverses.aliva_257 = {selected:false, personal:[], remark:''};
-        tag.diverses.aliva_257.selected = true;
+        if(!t.diverses.aliva_257) t.diverses.aliva_257 = {selected:false, personal:[], remark:''};
+        t.diverses.aliva_257.selected = true;
         if(legacyPE.personal && legacyPE.personal.length){
-          tag.diverses.aliva_257.personal = (tag.diverses.aliva_257.personal||[]).concat(legacyPE.personal);
+          t.diverses.aliva_257.personal = (t.diverses.aliva_257.personal||[]).concat(legacyPE.personal);
         }
       }
-      delete tag.diverses.platten_ersetzen;
+      delete t.diverses.platten_ersetzen;
     }
     /* Backfill default remarks (e.g. "Platten ersetzen" under Aliva 257 Top)
        for anyone whose entry already exists but was never given one — the
        field stays a normal editable one, this just saves typing. */
     DIVERSE_OPTIONS.forEach(function(o){
-      if(o.defaultRemark && tag.diverses[o.key] && !tag.diverses[o.key].remark){
-        tag.diverses[o.key].remark = o.defaultRemark;
+      if(o.defaultRemark && t.diverses[o.key] && !t.diverses[o.key].remark){
+        t.diverses[o.key].remark = o.defaultRemark;
       }
     });
-    if(!tag.unterschrift) tag.unterschrift = 'Eber Rocha';
-  })();
+    if(!t.unterschrift) t.unterschrift = 'Eber Rocha';
+  }
 
-  CATS.forEach(function(c){
-    if(!tag.categories[c.key]) tag.categories[c.key] = c.multiRow ? {rows:[], personal:[]} : {qty:{}, personal:[]};
-    if(!tag.categories[c.key].personal) tag.categories[c.key].personal = [];
-    if(c.multiRow){
-      if(!tag.categories[c.key].rows || !tag.categories[c.key].rows.length) tag.categories[c.key].rows = [ freshCatRow(c) ];
-      tag.categories[c.key].rows.forEach(function(row){
-        c.qty.forEach(function(f){ if(row[f.k]===undefined) row[f.k]=''; });
-        if(c.subgroups) c.subgroups.forEach(function(g){ g.fields.forEach(function(f){ if(row[f.k]===undefined) row[f.k]=''; }); });
-      });
-    } else {
-      if(!tag.categories[c.key].qty) tag.categories[c.key].qty = {};
-      c.qty.forEach(function(f){ if(tag.categories[c.key].qty[f.k]===undefined) tag.categories[c.key].qty[f.k]=''; });
-    }
-  });
+  /* Runs migrateTag() plus a general "fill in anything CATS now expects
+     that this particular tag doesn't have yet" pass. Always use this
+     (never migrateTag() alone) on any tag object that might have been
+     saved under an older version of the app — the live tag at startup,
+     or a snapshot pulled back out of Verlauf via doEditTag. */
+  function normalizeTag(t){
+    if(!t.categories) t.categories = freshCategories();
+    if(!t.diverses) t.diverses = freshDiverses();
+    migrateTag(t);
+    CATS.forEach(function(c){
+      if(!t.categories[c.key]) t.categories[c.key] = c.multiRow ? {rows:[], personal:[]} : {qty:{}, personal:[]};
+      if(!t.categories[c.key].personal) t.categories[c.key].personal = [];
+      if(c.multiRow){
+        if(!t.categories[c.key].rows || !t.categories[c.key].rows.length) t.categories[c.key].rows = [ freshCatRow(c) ];
+        t.categories[c.key].rows.forEach(function(row){
+          c.qty.forEach(function(f){ if(row[f.k]===undefined) row[f.k]=''; });
+          if(c.subgroups) c.subgroups.forEach(function(g){ g.fields.forEach(function(f){ if(row[f.k]===undefined) row[f.k]=''; }); });
+        });
+      } else {
+        if(!t.categories[c.key].qty) t.categories[c.key].qty = {};
+        c.qty.forEach(function(f){ if(t.categories[c.key].qty[f.k]===undefined) t.categories[c.key].qty[f.k]=''; });
+      }
+    });
+    return t;
+  }
+  normalizeTag(tag);
   var anker = Object.assign({ etappe:'', rows:[ makeAnkerRow() ] }, safeGet(LS.anker, {}));
   if(!anker.rows || !anker.rows.length) anker.rows = [ makeAnkerRow() ];
   var pfahl = Object.assign({ rows:[ makePfahlRow() ] }, safeGet(LS.pfahl, {}));
@@ -987,14 +1008,36 @@
         }).join('');
         qtyBlock = qtyInputs ? '<div class="row">'+qtyInputs+'</div>' : '';
       }
-      var personalRows = st.personal.map(function(p, i){
-        return personalRowHTML(p.name, p.stunden, 'data-cat="'+c.key+'" data-pidx="'+i+'"');
-      }).join('');
+      var personalBlock;
+      if(c.personalGroups){
+        var pgKeys = c.personalGroups.map(function(g){ return g.key; });
+        var pgHtml = c.personalGroups.map(function(g){
+          var rowsHtml = st.personal.map(function(p, i){ return {p:p, i:i}; })
+            .filter(function(o){ return o.p.group === g.key; })
+            .map(function(o){ return personalRowHTML(o.p.name, o.p.stunden, 'data-cat="'+c.key+'" data-pidx="'+o.i+'"'); })
+            .join('');
+          return '<div class="qty-subgroup"><div class="qty-subgroup-label">'+esc(g.label)+'</div>'+
+            rowsHtml+
+            '<button type="button" class="add-link" data-add-personal="'+c.key+'" data-personal-group="'+g.key+'"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Personal / Stunden – '+esc(g.label)+'</button>'+
+          '</div>';
+        }).join('');
+        var restRowsHtml = st.personal.map(function(p, i){ return {p:p, i:i}; })
+          .filter(function(o){ return pgKeys.indexOf(o.p.group) === -1; })
+          .map(function(o){ return personalRowHTML(o.p.name, o.p.stunden, 'data-cat="'+c.key+'" data-pidx="'+o.i+'"'); })
+          .join('');
+        var restHtml = restRowsHtml ? '<div class="qty-subgroup"><div class="qty-subgroup-label">Personal / Stunden (allgemein, nicht zugeordnet)</div>'+restRowsHtml+'</div>' : '';
+        personalBlock = pgHtml + restHtml;
+      } else {
+        var personalRows = st.personal.map(function(p, i){
+          return personalRowHTML(p.name, p.stunden, 'data-cat="'+c.key+'" data-pidx="'+i+'"');
+        }).join('') +
+        '<button type="button" class="add-link" data-add-personal="'+c.key+'"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Personal / Stunden</button>';
+        personalBlock = personalRows;
+      }
       return '<div class="cat">'+
         '<div class="cat-title">'+esc(c.label)+'</div>'+
         qtyBlock+
-        personalRows+
-        '<button type="button" class="add-link" data-add-personal="'+c.key+'"><svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Personal / Stunden</button>'+
+        personalBlock+
       '</div>';
     }).join('');
 
@@ -1061,7 +1104,10 @@
   document.getElementById('catsContainer').addEventListener('click', function(e){
     var addBtn = e.target.closest('[data-add-personal]');
     if(addBtn){
-      tag.categories[addBtn.getAttribute('data-add-personal')].personal.push({name:'', stunden:''});
+      var newPersonalEntry = {name:'', stunden:''};
+      var pGroup = addBtn.getAttribute('data-personal-group');
+      if(pGroup) newPersonalEntry.group = pGroup;
+      tag.categories[addBtn.getAttribute('data-add-personal')].personal.push(newPersonalEntry);
       saveTag(); renderCats(); return;
     }
     var dvAddBtn = e.target.closest('[data-dv-add-personal]');
@@ -1322,7 +1368,7 @@
       }
       hist.tage = hist.tage.filter(function(x){ return x.id !== id; });
       saveHist();
-      tag = Object.assign(freshTag(h.date), JSON.parse(JSON.stringify(h.snapshot)));
+      tag = normalizeTag(Object.assign(freshTag(h.date), JSON.parse(JSON.stringify(h.snapshot))));
       saveTag();
       renderAll();
       selectTab('panelTag');
@@ -1491,6 +1537,23 @@
     });
     return parts.length ? parts.join(', ') : '—';
   }
+  /* Like personalText(), but for a category whose personnel are split into
+     sub-groups (e.g. Anker/Pfähle: Bohren vs. Versetzen, injizieren) — each
+     group gets its own labelled line. Entries with no (or an unknown) group
+     — e.g. anything recorded before this split existed — are never dropped;
+     they're shown under "Allgemein" instead. */
+  function personalTextGrouped(c, st){
+    if(!c.personalGroups) return personalText(st.personal);
+    var list = st.personal || [];
+    var groupKeys = c.personalGroups.map(function(g){ return g.key; });
+    var lines = c.personalGroups.map(function(g){
+      var txt = personalText(list.filter(function(p){ return p.group === g.key; }));
+      return txt !== '—' ? (esc(g.label)+': '+txt) : '';
+    }).filter(Boolean);
+    var restTxt = personalText(list.filter(function(p){ return groupKeys.indexOf(p.group) === -1; }));
+    if(restTxt !== '—') lines.push('Allgemein: '+restTxt);
+    return lines.length ? lines.join('<br>') : '—';
+  }
   function catQtyText(c, st){
     if(c.multiRow){
       var lines = (st.rows||[]).map(function(row){
@@ -1515,7 +1578,7 @@
        vertical space without telling the reader anything. */
     var rows = CATS.map(function(c){
       var st = t.categories[c.key] || {qty:{}, personal:[]};
-      return {label:c.label, qty:catQtyText(c, st), personal:personalText(st.personal)};
+      return {label:c.label, qty:catQtyText(c, st), personal:personalTextGrouped(c, st)};
     }).filter(function(r){ return r.qty !== '—' || r.personal !== '—'; });
     var rowsHtml = rows.length ? rows.map(function(r){
       return '<tr><td>'+esc(r.label)+'</td><td>'+r.qty+'</td><td>'+r.personal+'</td></tr>';
