@@ -338,6 +338,7 @@
     <button class="tab" id="tabBtnTag" role="tab" aria-selected="true">Tagesrapport</button>
     <button class="tab" id="tabBtnAnker" role="tab" aria-selected="false">Ankerprotokoll</button>
     <button class="tab" id="tabBtnPfahl" role="tab" aria-selected="false">Pfahlprotokoll</button>
+    <button class="tab" id="tabBtnBohrpfahl" role="tab" aria-selected="false">Bohrpfahlprotokoll</button>
     <button class="tab" id="tabBtnHist" role="tab" aria-selected="false">Verlauf</button>
   </div>
 </header>
@@ -437,6 +438,20 @@
     </button>
   </section>
 
+  <!-- BOHRPFAHLPROTOKOLL -->
+  <section class="panel" id="panelBohrpfahl">
+    <div class="row">
+      <div class="field"><label for="bohrdurchmesser">Bohrdurchmesser</label><input id="bohrdurchmesser" type="text" placeholder="z. B. 540 mm"></div>
+      <div class="field"><label for="unterschriftBohrpfahl">Unterschrift</label><input id="unterschriftBohrpfahl" type="text" placeholder="Name eintippen"></div>
+    </div>
+
+    <div class="section-label">Träger</div>
+    <div id="bohrpfahlRowsContainer"></div>
+    <button type="button" class="add-link" id="addBohrpfahlRow">
+      <svg class="ic" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Neuer Träger
+    </button>
+  </section>
+
   <!-- HISTORY -->
   <section class="panel" id="panelHist">
     <div class="section-label">Abgeschlossene Tagesrapporte</div>
@@ -445,6 +460,8 @@
     <div id="histEtappeList"></div>
     <div class="section-label" style="margin-top:18px">Abgeschlossene Pfahlprotokolle</div>
     <div id="histPfahlList"></div>
+    <div class="section-label" style="margin-top:18px">Abgeschlossene Bohrpfahlprotokolle</div>
+    <div id="histBohrpfahlList"></div>
   </section>
 
 </main>
@@ -473,6 +490,14 @@
     <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Als PDF exportieren
   </button>
 </div>
+<div class="bottom-bar no-print" id="barBohrpfahl" style="display:none">
+  <button class="btn ghost" id="btnNewBohrpfahlListe">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7M21 4v5h-5"/></svg> Liste abschliessen
+  </button>
+  <button class="btn primary" id="btnExportBohrpfahl">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v13m0 0l-4-4m4 4l4-4M5 21h14"/></svg> Als PDF exportieren
+  </button>
+</div>
 
 <div id="printSheet"></div>
 
@@ -480,7 +505,7 @@
 (function(){
   "use strict";
 
-  var LS = { common:"sb_common_v1", tag:"sb_tag_v1", anker:"sb_anker_v1", pfahl:"sb_pfahl_v1", hist:"sb_hist_v1" };
+  var LS = { common:"sb_common_v1", tag:"sb_tag_v1", anker:"sb_anker_v1", pfahl:"sb_pfahl_v1", bohrpfahl:"sb_bohrpfahl_v1", hist:"sb_hist_v1" };
 
   function todayISO(){
     var d = new Date();
@@ -762,6 +787,15 @@
       primZement: '', primDruck: '', nachZement: '', nachDruck: '', bemerkungen: ''
     };
   }
+  function makeBohrpfahlRow(prefill){
+    prefill = prefill || {};
+    return {
+      datum: prefill.datum || todayISO(), nr: prefill.nr || '', typ: prefill.typ || '',
+      traegerLaenge: '', bohrplanum: '', bohrtiefe: '', traegerfuss: '',
+      betoniert: '', verfuellt: '', hindernisVonBis: '', hindernisLaenge: '',
+      wasserAb: '', wasserLaenge: '', bemerkungen: ''
+    };
+  }
 
   var common = Object.assign({auftraggeber:'', baustelle:''}, safeGet(LS.common, {}));
   var tag = Object.assign(freshTag(todayISO()), safeGet(LS.tag, {}));
@@ -868,15 +902,20 @@
   if(!anker.rows || !anker.rows.length) anker.rows = [ makeAnkerRow() ];
   var pfahl = Object.assign({ rows:[ makePfahlRow() ] }, safeGet(LS.pfahl, {}));
   if(!pfahl.rows || !pfahl.rows.length) pfahl.rows = [ makePfahlRow() ];
-  var hist = Object.assign({ tage:[], etapas:[], pfaehle:[] }, safeGet(LS.hist, {}));
+  var bohrpfahl = Object.assign({ bohrdurchmesser:'', unterschrift:'Eber Rocha', rows:[ makeBohrpfahlRow() ] }, safeGet(LS.bohrpfahl, {}));
+  if(!bohrpfahl.rows || !bohrpfahl.rows.length) bohrpfahl.rows = [ makeBohrpfahlRow() ];
+  if(!bohrpfahl.unterschrift) bohrpfahl.unterschrift = 'Eber Rocha';
+  var hist = Object.assign({ tage:[], etapas:[], pfaehle:[], bohrpfaehle:[] }, safeGet(LS.hist, {}));
   if(!hist.tage) hist.tage = [];
   if(!hist.etapas) hist.etapas = [];
   if(!hist.pfaehle) hist.pfaehle = [];
+  if(!hist.bohrpfaehle) hist.bohrpfaehle = [];
 
   function saveCommon(){ safeSet(LS.common, common); flashSaved(); }
   function saveTag(){ safeSet(LS.tag, tag); flashSaved(); }
   function saveAnker(){ safeSet(LS.anker, anker); flashSaved(); }
   function savePfahl(){ safeSet(LS.pfahl, pfahl); flashSaved(); }
+  function saveBohrpfahl(){ safeSet(LS.bohrpfahl, bohrpfahl); flashSaved(); }
   function saveHist(){ safeSet(LS.hist, hist); flashSaved(); }
 
   /* ---------- simple bound fields ---------- */
@@ -890,6 +929,8 @@
   bindText('tagDatum', function(){return tag.datum;}, function(v){tag.datum=v;}, function(){ saveTag(); renderTagBanner(); });
   bindText('tagWetter', function(){return tag.wetter;}, function(v){tag.wetter=v;}, saveTag);
   bindText('etappe', function(){return anker.etappe;}, function(v){anker.etappe=v;}, saveAnker);
+  bindText('bohrdurchmesser', function(){return bohrpfahl.bohrdurchmesser;}, function(v){bohrpfahl.bohrdurchmesser=v;}, saveBohrpfahl);
+  bindText('unterschriftBohrpfahl', function(){return bohrpfahl.unterschrift;}, function(v){bohrpfahl.unterschrift=v;}, saveBohrpfahl);
   bindText('moertelTyp', function(){return tag.material.moertelTyp;}, function(v){tag.material.moertelTyp=v;}, saveTag);
   bindText('moertelKg', function(){return tag.material.moertelKg;}, function(v){tag.material.moertelKg=v;}, saveTag);
   bindText('netzeTyp', function(){return tag.material.netzeTyp;}, function(v){tag.material.netzeTyp=v;}, saveTag);
@@ -907,6 +948,7 @@
     {btn:'tabBtnTag', panel:'panelTag', bar:'barTag'},
     {btn:'tabBtnAnker', panel:'panelAnker', bar:'barAnker'},
     {btn:'tabBtnPfahl', panel:'panelPfahl', bar:'barPfahl'},
+    {btn:'tabBtnBohrpfahl', panel:'panelBohrpfahl', bar:'barBohrpfahl'},
     {btn:'tabBtnHist', panel:'panelHist', bar:null}
   ];
   function selectTab(name){
@@ -921,6 +963,7 @@
   document.getElementById('tabBtnTag').addEventListener('click', function(){ selectTab('panelTag'); });
   document.getElementById('tabBtnAnker').addEventListener('click', function(){ selectTab('panelAnker'); });
   document.getElementById('tabBtnPfahl').addEventListener('click', function(){ selectTab('panelPfahl'); });
+  document.getElementById('tabBtnBohrpfahl').addEventListener('click', function(){ selectTab('panelBohrpfahl'); });
   document.getElementById('tabBtnHist').addEventListener('click', function(){ selectTab('panelHist'); });
 
   /* ---------- Aufgeführte Arbeiten / categories ---------- */
@@ -1328,6 +1371,79 @@
     savePfahl(); renderPfahlRows();
   });
 
+  /* ---------- Bohrpfahlprotokoll rows ---------- */
+  var BOHRPFAHL_FIELDS = [
+    {k:'datum', label:'Datum', type:'date'},
+    {k:'nr', label:'Träger-Nr.', type:'text'},
+    {k:'typ', label:'Typ', type:'text'},
+    {k:'traegerLaenge', label:'Länge Träger [m]', type:'number'},
+    {k:'bohrplanum', label:'Bohrplanum [m ü.M.]', type:'number'},
+    {k:'bohrtiefe', label:'Bohrtiefe [m]', type:'number'},
+    {k:'traegerfuss', label:'Trägerfuss [m]', type:'number'},
+    {k:'betoniert', label:'Bohrloch-Länge betoniert [m]', type:'number'},
+    {k:'verfuellt', label:'Bohrloch-Länge verfüllt [m]', type:'number'},
+    {k:'hindernisVonBis', label:'Blöcke/Steine/Beton/Belag von..bis [m]', type:'text'},
+    {k:'hindernisLaenge', label:'Blöcke/Steine/Beton/Belag Länge [m]', type:'number'},
+    {k:'wasserAb', label:'Wasser ab [m]', type:'number'},
+    {k:'wasserLaenge', label:'Wasser Länge [m]', type:'number'}
+  ];
+  function renderBohrpfahlRows(){
+    var root = document.getElementById('bohrpfahlRowsContainer');
+    root.innerHTML = bohrpfahl.rows.map(function(r, i){
+      var inputs = BOHRPFAHL_FIELDS.map(function(f){
+        var listAttr = f.list ? ' data-list="'+f.list+'"' : '';
+        return '<div class="field"><label>'+esc(f.label)+'</label><input type="'+f.type+'" '+(f.type==='number'?'inputmode="decimal"':'')+listAttr+' data-bpf="'+f.k+'" data-bpidx="'+i+'" value="'+esc(r[f.k])+'"></div>';
+      }).join('');
+      return '<div class="anker-row" data-bpidx="'+i+'">'+
+        '<div class="anker-row-head"><span class="idx">Träger '+(i+1)+'</span>'+
+        '<div class="actions">'+
+        '<button type="button" class="icon-btn" data-bp-copy="'+i+'" aria-label="Kopieren"><svg class="ic" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg></button>'+
+        '<button type="button" class="icon-btn danger" data-bp-remove="'+i+'" aria-label="Entfernen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
+        '</div></div>'+
+        '<div class="grid2">'+inputs+'</div>'+
+        '<div class="field" style="margin-top:2px"><label>Bemerkungen</label><textarea rows="2" data-bpf="bemerkungen" data-bpidx="'+i+'">'+esc(r.bemerkungen)+'</textarea></div>'+
+      '</div>';
+    }).join('');
+  }
+  document.getElementById('bohrpfahlRowsContainer').addEventListener('input', function(e){
+    var t = e.target;
+    if(t.hasAttribute('data-bpf')){
+      bohrpfahl.rows[parseInt(t.getAttribute('data-bpidx'),10)][t.getAttribute('data-bpf')] = t.value;
+      saveBohrpfahl();
+    }
+  });
+  document.getElementById('bohrpfahlRowsContainer').addEventListener('click', function(e){
+    var cp = e.target.closest('[data-bp-copy]');
+    if(cp){
+      var srcIdx = parseInt(cp.getAttribute('data-bp-copy'),10);
+      var src = bohrpfahl.rows[srcIdx];
+      showPrompt('Wie viele Kopien dieses Trägers erstellen?<br><span class="hint-inline">Jede Kopie übernimmt alle Werte und kann danach einzeln angepasst werden.</span>', '1', function(val){
+        var n = parseInt(val,10);
+        if(!n || n<1) return;
+        if(n>50) n=50;
+        for(var i=0;i<n;i++){
+          var copy = JSON.parse(JSON.stringify(src));
+          var incNr = incrementNr(src.nr, i + 1);
+          if(incNr) copy.nr = incNr;
+          bohrpfahl.rows.splice(srcIdx + 1 + i, 0, copy);
+        }
+        saveBohrpfahl(); renderBohrpfahlRows();
+      });
+      return;
+    }
+    var rm = e.target.closest('[data-bp-remove]');
+    if(rm){
+      if(bohrpfahl.rows.length <= 1){ bohrpfahl.rows[0] = makeBohrpfahlRow(); }
+      else bohrpfahl.rows.splice(parseInt(rm.getAttribute('data-bp-remove'),10),1);
+      saveBohrpfahl(); renderBohrpfahlRows();
+    }
+  });
+  document.getElementById('addBohrpfahlRow').addEventListener('click', function(){
+    var last = bohrpfahl.rows[bohrpfahl.rows.length-1] || {};
+    bohrpfahl.rows.push(makeBohrpfahlRow({ datum: todayISO(), typ:last.typ, nr: incrementNr(last.nr, 1) }));
+    saveBohrpfahl(); renderBohrpfahlRows();
+  });
+
   /* ---------- New day / new stage ---------- */
   function renderTagBanner(){
     var el = document.getElementById('tagBanner');
@@ -1410,6 +1526,19 @@
     if(!r) return true;
     return PFAHL_FIELDS.every(function(f){ return f.k === 'datum' || !r[f.k]; }) && !r.bemerkungen;
   }
+  function normalizeBohrpfahlRow(r){
+    r = r || {};
+    BOHRPFAHL_FIELDS.forEach(function(f){ if(r[f.k]===undefined) r[f.k]=''; });
+    if(r.bemerkungen===undefined) r.bemerkungen='';
+    return r;
+  }
+  function bohrpfahlIsEmpty(b){
+    if(b.bohrdurchmesser && String(b.bohrdurchmesser).trim()) return false;
+    if(!b.rows || b.rows.length > 1) return false;
+    var r = b.rows[0];
+    if(!r) return true;
+    return BOHRPFAHL_FIELDS.every(function(f){ return f.k === 'datum' || !r[f.k]; }) && !r.bemerkungen;
+  }
 
   /* ---------- Edit an archived Etappe (Ankerprotokoll) from Verlauf ---------- */
   function doEditEtappe(id){
@@ -1475,6 +1604,38 @@
   }
   document.getElementById('btnNewPfahlListe').addEventListener('click', doNewPfahlListe);
 
+  /* ---------- Edit an archived Bohrpfahlprotokoll from Verlauf ---------- */
+  function doEditBohrpfahl(id){
+    var h = hist.bohrpfaehle.find(function(x){ return x.id === id; });
+    if(!h) return;
+    var keepsCurrent = !bohrpfahlIsEmpty(bohrpfahl);
+    var msg = 'Dieses Bohrpfahlprotokoll vom '+esc(fmtDate(h.date))+' zum Bearbeiten laden?'+
+      (keepsCurrent ? '<br>Das aktuell offene Bohrpfahlprotokoll wird zuerst automatisch in den Verlauf verschoben, damit nichts verloren geht.' : '');
+    showConfirm(msg, function(){
+      if(keepsCurrent){
+        hist.bohrpfaehle.unshift({ id:'bp'+Date.now(), baustelle: common.baustelle, bohrdurchmesser: bohrpfahl.bohrdurchmesser, unterschrift: bohrpfahl.unterschrift, date: todayISO(), rows: JSON.parse(JSON.stringify(bohrpfahl.rows)) });
+      }
+      hist.bohrpfaehle = hist.bohrpfaehle.filter(function(x){ return x.id !== id; });
+      saveHist();
+      var rows = JSON.parse(JSON.stringify(h.rows||[])).map(normalizeBohrpfahlRow);
+      bohrpfahl = { bohrdurchmesser: h.bohrdurchmesser||'', unterschrift: h.unterschrift||'Eber Rocha', rows: rows.length ? rows : [ makeBohrpfahlRow() ] };
+      saveBohrpfahl();
+      renderAll();
+      selectTab('panelBohrpfahl');
+    });
+  }
+
+  function doNewBohrpfahlListe(){
+    showConfirm('Aktuelles Bohrpfahlprotokoll abschliessen und archivieren?<br>Die Liste wird geleert.', function(){
+      hist.bohrpfaehle.unshift({ id:'bp'+Date.now(), baustelle: common.baustelle, bohrdurchmesser: bohrpfahl.bohrdurchmesser, unterschrift: bohrpfahl.unterschrift, date: todayISO(), rows: JSON.parse(JSON.stringify(bohrpfahl.rows)) });
+      saveHist();
+      bohrpfahl = { bohrdurchmesser:'', unterschrift:'Eber Rocha', rows:[ makeBohrpfahlRow() ] };
+      saveBohrpfahl();
+      renderAll();
+    });
+  }
+  document.getElementById('btnNewBohrpfahlListe').addEventListener('click', doNewBohrpfahlListe);
+
   /* ---------- History ---------- */
   function renderHistory(){
     var tagRoot = document.getElementById('histTagList');
@@ -1519,6 +1680,20 @@
           '</div></div>';
       }).join('');
     }
+    var bpRoot = document.getElementById('histBohrpfahlList');
+    if(!hist.bohrpfaehle.length){
+      bpRoot.innerHTML = '<div class="hist-empty">Noch keine abgeschlossenen Bohrpfahlprotokolle.</div>';
+    } else {
+      bpRoot.innerHTML = hist.bohrpfaehle.map(function(h){
+        return '<div class="hist-item"><div class="meta"><div class="date">'+esc(fmtDate(h.date))+'</div>'+
+          '<div class="sub">'+h.rows.length+' Träger · abgeschlossen '+esc(fmtDate(h.date))+'</div></div>'+
+          '<div class="hist-actions">'+
+          '<button type="button" class="icon-btn" data-hist-edit-bohrpfahl="'+h.id+'" aria-label="Bearbeiten"><svg class="ic" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>'+
+          '<button type="button" class="icon-btn" data-hist-print-bohrpfahl="'+h.id+'" aria-label="Drucken"><svg class="ic" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg></button>'+
+          '<button type="button" class="icon-btn danger" data-hist-del-bohrpfahl="'+h.id+'" aria-label="Löschen"><svg class="ic" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0l-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6h16z"/></svg></button>'+
+          '</div></div>';
+      }).join('');
+    }
   }
   document.getElementById('panelHist').addEventListener('click', function(e){
     var et = e.target.closest('[data-hist-edit-tag]');
@@ -1539,6 +1714,12 @@
     if(pp){ var hp = hist.pfaehle.find(function(x){return x.id===pp.getAttribute('data-hist-print-pfahl');}); if(hp) printPfahl(hp.rows, pp); return; }
     var dp = e.target.closest('[data-hist-del-pfahl]');
     if(dp){ var idPf = dp.getAttribute('data-hist-del-pfahl'); showConfirm('Diesen Eintrag löschen?', function(){ hist.pfaehle = hist.pfaehle.filter(function(x){return x.id!==idPf;}); saveHist(); renderHistory(); }); return; }
+    var ebp = e.target.closest('[data-hist-edit-bohrpfahl]');
+    if(ebp){ doEditBohrpfahl(ebp.getAttribute('data-hist-edit-bohrpfahl')); return; }
+    var pbp = e.target.closest('[data-hist-print-bohrpfahl]');
+    if(pbp){ var hbp = hist.bohrpfaehle.find(function(x){return x.id===pbp.getAttribute('data-hist-print-bohrpfahl');}); if(hbp) printBohrpfahl(hbp, pbp); return; }
+    var dbp = e.target.closest('[data-hist-del-bohrpfahl]');
+    if(dbp){ var idBp = dbp.getAttribute('data-hist-del-bohrpfahl'); showConfirm('Diesen Eintrag löschen?', function(){ hist.bohrpfaehle = hist.bohrpfaehle.filter(function(x){return x.id!==idBp;}); saveHist(); renderHistory(); }); return; }
   });
 
   /* ---------- Print / PDF export ----------
@@ -1753,9 +1934,38 @@
       '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>';
     finishExport(html, true, 'Pfahlprotokoll_' + todayISO(), btn);
   }
+  /* Bohrpfahlprotokoll's paper form groups its columns under two-tier
+     headers (Träger / Bohrung / Bohrhindernisse), so — unlike the flatter
+     Anker-/Pfahlprotokoll tables — this print table reproduces that with a
+     rowspan/colspan header, matching the original document layout. */
+  function printBohrpfahl(b, btn){
+    var rows = b.rows || [];
+    var head =
+      '<tr><th rowspan="2">Datum</th><th rowspan="2">Träger-Nr.</th><th colspan="2">Träger</th><th colspan="5">Bohrung</th><th colspan="4">Bohrhindernisse</th><th rowspan="2">Bemerkungen</th></tr>'+
+      '<tr><th>Typ</th><th>Länge [m]</th><th>Bohrplanum [m ü.M.]</th><th>Bohrtiefe [m]</th><th>Trägerfuss [m]</th><th>betoniert [m]</th><th>verfüllt [m]</th>'+
+      '<th>Blöcke/Steine von..bis [m]</th><th>Blöcke/Steine Länge [m]</th><th>Wasser ab [m]</th><th>Wasser Länge [m]</th></tr>';
+    var body = rows.map(function(r){
+      return '<tr><td>'+esc(fmtDate(r.datum))+'</td><td>'+esc(r.nr)+'</td><td>'+esc(r.typ)+'</td><td>'+esc(r.traegerLaenge)+'</td>'+
+        '<td>'+esc(r.bohrplanum)+'</td><td>'+esc(r.bohrtiefe)+'</td><td>'+esc(r.traegerfuss)+'</td>'+
+        '<td>'+esc(r.betoniert)+'</td><td>'+esc(r.verfuellt)+'</td>'+
+        '<td>'+esc(r.hindernisVonBis)+'</td><td>'+esc(r.hindernisLaenge)+'</td><td>'+esc(r.wasserAb)+'</td><td>'+esc(r.wasserLaenge)+'</td>'+
+        '<td>'+esc(r.bemerkungen)+'</td></tr>';
+    }).join('');
+    var html = printHeaderHTML('Bohrpfahlprotokoll') +
+      '<div class="meta"><div><b>Auftraggeber:</b> '+esc(common.auftraggeber||'—')+'</div>'+
+      '<div><b>Baustelle:</b> '+esc(common.baustelle||'—')+'</div>'+
+      '<div><b>Bohrdurchmesser:</b> '+esc(b.bohrdurchmesser||'—')+'</div></div>'+
+      '<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>'+
+      '<div style="margin-top:24px;width:240px;">'+
+      '<div style="font-family:\'Dancing Script\',cursive;font-weight:600;font-size:30px;line-height:1;">'+esc(b.unterschrift||'—')+'</div>'+
+      '<div style="border-top:1px solid #999;margin-top:4px;padding-top:4px;font-size:10px;color:#666;">Unterschrift</div>'+
+      '</div>';
+    finishExport(html, true, 'Bohrpfahlprotokoll_' + todayISO(), btn);
+  }
   document.getElementById('btnExportTag').addEventListener('click', function(e){ printTag(tag, e.currentTarget); });
   document.getElementById('btnExportAnker').addEventListener('click', function(e){ printAnker(anker.etappe, anker.rows, e.currentTarget); });
   document.getElementById('btnExportPfahl').addEventListener('click', function(e){ printPfahl(pfahl.rows, e.currentTarget); });
+  document.getElementById('btnExportBohrpfahl').addEventListener('click', function(e){ printBohrpfahl(bohrpfahl, e.currentTarget); });
 
   /* ---------- init ---------- */
   function renderAll(){
@@ -1773,10 +1983,13 @@
     document.getElementById('diversesMaterial').value = tag.material.diversesMaterial;
     document.getElementById('bemerkungenTag').value = tag.bemerkungen;
     document.getElementById('unterschriftTag').value = tag.unterschrift;
+    document.getElementById('bohrdurchmesser').value = bohrpfahl.bohrdurchmesser;
+    document.getElementById('unterschriftBohrpfahl').value = bohrpfahl.unterschrift;
     renderCats();
     renderAnkerPfaehle();
     renderAnkerRows();
     renderPfahlRows();
+    renderBohrpfahlRows();
     renderTagBanner();
   }
   renderAll();
